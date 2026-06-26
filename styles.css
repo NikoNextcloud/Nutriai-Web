@@ -191,6 +191,13 @@ h2 {
   line-height: 1;
 }
 
+.recommended-calories {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .ring-core span {
   color: var(--muted);
   font-size: 0.76rem;

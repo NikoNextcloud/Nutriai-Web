@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   restoreTheme();
   bindNavigation();
   bindProfile();
+  bindCalorieRecommendation();
   bindCamera();
   bindHydration();
   bindSegments();
@@ -51,6 +52,7 @@ function defaultProfile() {
     activityLabel: "Умерена",
     goal: "Отслабване",
     dailyLimit: 1800,
+    recommendedCalories: 1800,
     hasCompletedSetup: false
   };
 }
@@ -239,7 +241,7 @@ function bindProfile() {
   $("profileForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const activitySelect = $("activity");
-    state.profile = {
+    const nextProfile = {
       gender: $("gender").value,
       age: Number($("age").value),
       height: Number($("height").value),
@@ -251,9 +253,12 @@ function bindProfile() {
       dailyLimit: Number($("dailyLimit").value),
       hasCompletedSetup: true
     };
-    const targets = calculateTargets(state.profile);
-    state.profile.dailyLimit = targets.recommendedCalories;
-    $("dailyLimit").value = targets.recommendedCalories;
+    const targets = calculateTargets(nextProfile);
+    state.profile = {
+      ...nextProfile,
+      dailyLimit: Number($("dailyLimit").value) || targets.recommendedCalories,
+      recommendedCalories: targets.recommendedCalories
+    };
     save("nutriai.profile", state.profile);
     updateAppVisibility();
     renderAll();
@@ -261,6 +266,46 @@ function bindProfile() {
   });
 }
 
+function bindCalorieRecommendation() {
+  const fields = ["age", "height", "weight", "targetWeight", "activity", "goal"];
+  const dailyLimit = $("dailyLimit");
+  let userChangedDailyLimit = Boolean(state.profile.hasCompletedSetup);
+
+  dailyLimit.addEventListener("input", () => {
+    userChangedDailyLimit = true;
+  });
+
+  fields.forEach((id) => {
+    $(id).addEventListener("input", () => updateRecommendedDailyLimit(userChangedDailyLimit));
+    $(id).addEventListener("change", () => updateRecommendedDailyLimit(userChangedDailyLimit));
+  });
+
+  document.querySelectorAll("[data-segment='gender'] button").forEach((button) => {
+    button.addEventListener("click", () => setTimeout(() => updateRecommendedDailyLimit(userChangedDailyLimit), 0));
+  });
+
+  updateRecommendedDailyLimit(userChangedDailyLimit);
+}
+
+function updateRecommendedDailyLimit(keepUserValue = false) {
+  const activitySelect = $("activity");
+  const profile = {
+    gender: $("gender").value,
+    age: Number($("age").value),
+    height: Number($("height").value),
+    weight: Number($("weight").value),
+    targetWeight: Number($("targetWeight").value),
+    activity: Number(activitySelect.value),
+    activityLabel: activitySelect.options[activitySelect.selectedIndex]?.text || "",
+    goal: $("goal").value,
+    dailyLimit: Number($("dailyLimit").value)
+  };
+  const targets = calculateTargets(profile);
+  state.profile.recommendedCalories = targets.recommendedCalories;
+  if (!keepUserValue) {
+    $("dailyLimit").value = targets.recommendedCalories;
+  }
+}
 function updateAppVisibility() {
   const completed = Boolean(state.profile.hasCompletedSetup);
   $("onboardingScreen").classList.toggle("hidden", completed);
@@ -275,7 +320,8 @@ function hydrateProfileForm() {
   $("targetWeight").value = state.profile.targetWeight;
   $("activity").value = String(state.profile.activity);
   $("goal").value = state.profile.goal;
-  $("dailyLimit").value = state.profile.dailyLimit;
+  $("dailyLimit").value = state.profile.dailyLimit || state.profile.recommendedCalories || 1800;
+  updateRecommendedDailyLimit(true);
   $("weightEntry").value = state.weights.at(-1)?.weight || state.profile.weight;
 }
 
@@ -336,12 +382,14 @@ function renderDashboard() {
   const targets = calculateTargets(state.profile);
   const consumed = consumedToday();
   const totals = macroTotalsToday();
-  const limit = state.profile.dailyLimit || targets.recommendedCalories;
+  const recommended = state.profile.recommendedCalories || targets.recommendedCalories;
+  const limit = state.profile.dailyLimit || recommended;
   const remaining = Math.round(limit - consumed);
   const percent = Math.min(Math.max(consumed / limit, 0), 1);
-  $("remainingCalories").textContent = `${Math.max(remaining, 0)}`;
+  $("recommendedCalories").textContent = `Преп. ${recommended} kcal`;
+  $("remainingCalories").textContent = `${limit}`;
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
-  $("targetCalories").textContent = `${limit}`;
+  $("targetCalories").textContent = `${Math.max(remaining, 0)}`;
   $("calorieRing").style.background = `conic-gradient(var(--orange) ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
 
   $("macroBars").innerHTML = [
