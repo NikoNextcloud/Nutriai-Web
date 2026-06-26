@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindProgress();
   bindChat();
   hydrateProfileForm();
+  updateAppVisibility();
   renderAll();
 });
 
@@ -40,7 +41,8 @@ function defaultProfile() {
     activity: 1.55,
     activityLabel: "Умерена",
     goal: "Отслабване",
-    dailyLimit: 1800
+    dailyLimit: 1800,
+    hasCompletedSetup: false
   };
 }
 
@@ -137,14 +139,22 @@ function bindProfile() {
       activity: Number(activitySelect.value),
       activityLabel: activitySelect.options[activitySelect.selectedIndex].text,
       goal: $("goal").value,
-      dailyLimit: Number($("dailyLimit").value)
+      dailyLimit: Number($("dailyLimit").value),
+      hasCompletedSetup: true
     };
     const targets = calculateTargets(state.profile);
     state.profile.dailyLimit = targets.recommendedCalories;
     $("dailyLimit").value = targets.recommendedCalories;
     save("nutriai.profile", state.profile);
+    updateAppVisibility();
     renderAll();
   });
+}
+
+function updateAppVisibility() {
+  const completed = Boolean(state.profile.hasCompletedSetup);
+  $("onboardingScreen").classList.toggle("hidden", completed);
+  document.querySelector(".phone-app").classList.toggle("hidden", !completed);
 }
 
 function hydrateProfileForm() {
@@ -218,9 +228,9 @@ function renderDashboard() {
   $("calorieRing").style.background = `conic-gradient(var(--orange) ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
 
   $("macroBars").innerHTML = [
-    macroCard("Протеин", totals.protein, targets.protein, "var(--orange)"),
-    macroCard("Въгл.", totals.carbs, targets.carbs, "var(--blue)"),
-    macroCard("Мазнини", totals.fat, targets.fat, "var(--yellow)")
+    macroCard("💪", "Протеин", totals.protein, targets.protein, "var(--orange)"),
+    macroCard("🌾", "Въгл.", totals.carbs, targets.carbs, "var(--blue)"),
+    macroCard("🥑", "Мазнини", totals.fat, targets.fat, "var(--yellow)")
   ].join("");
 
   const waterPercent = Math.min(state.water.amount / targets.water, 1);
@@ -256,10 +266,11 @@ function metricHtml(label, value) {
   return `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`;
 }
 
-function macroCard(title, current, target, color) {
+function macroCard(icon, title, current, target, color) {
   const percent = Math.min(Number(current || 0) / Math.max(Number(target || 1), 1), 1);
   return `
     <div class="macro-card">
+      <span class="macro-icon">${escapeHtml(icon)}</span>
       <small>${escapeHtml(title)}</small>
       <div class="macro-bar"><span style="height:${percent * 100}%;background:${color}"></span></div>
       <strong>${Math.round(current || 0)} / ${Math.round(target || 0)}g</strong>
@@ -293,15 +304,15 @@ function renderTodayMeals() {
 function renderProgressCards(targets) {
   const bmiCategory = getBMICategory(targets.bmi);
   $("progressCards").innerHTML = [
-    progressCard("BMI Индекс", targets.bmi, bmiCategory, getBMIColor(targets.bmi)),
-    progressCard("BMR", targets.bmr, "kcal / ден", "var(--orange)"),
-    progressCard("TDEE", targets.tdee, "kcal / ден", "var(--blue)")
+    progressCard("🧭", "BMI Индекс", targets.bmi, bmiCategory, getBMIColor(targets.bmi)),
+    progressCard("🔥", "BMR", targets.bmr, "kcal / ден", "var(--orange)"),
+    progressCard("⚡", "TDEE", targets.tdee, "kcal / ден", "var(--blue)")
   ].join("");
   $("weightGoalLabel").textContent = `Цел: ${state.profile.targetWeight} кг`;
 }
 
-function progressCard(title, value, desc, color) {
-  return `<div class="progress-mini-card"><small>${escapeHtml(title)}</small><strong style="color:${color}">${escapeHtml(value)}</strong><span>${escapeHtml(desc)}</span></div>`;
+function progressCard(icon, title, value, desc, color) {
+  return `<div class="progress-mini-card"><b>${escapeHtml(icon)}</b><small>${escapeHtml(title)}</small><strong style="color:${color}">${escapeHtml(value)}</strong><span>${escapeHtml(desc)}</span></div>`;
 }
 
 function getBMICategory(bmi) {
@@ -474,12 +485,21 @@ function mealRowHtml(meal, includeDate = false) {
   return `
     <div class="meal-row">
       <div>
-        <strong>${escapeHtml(meal.title)}</strong>
+        <strong>${mealTypeIcon(meal.mealType)} ${escapeHtml(meal.title)}</strong>
         <p>${escapeHtml(time)} • ${escapeHtml(mealType)} • ${escapeHtml(meal.analysis.rating || "")}</p>
       </div>
       <strong>+${Math.round(meal.analysis.totalCalories || 0)} kcal</strong>
     </div>
   `;
+}
+
+function mealTypeIcon(type) {
+  return {
+    breakfast: "🌅",
+    lunch: "☀️",
+    dinner: "🌙",
+    snack: "🍏"
+  }[type] || "🍽";
 }
 
 function mealTypeLabel(type) {

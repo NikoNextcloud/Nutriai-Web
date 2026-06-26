@@ -9,7 +9,53 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="phone-app">
+  <section class="onboarding-screen" id="onboardingScreen">
+    <div class="onboarding-card">
+      <div class="onboarding-hero">
+        <span class="app-mark">🍊</span>
+        <p class="eyebrow">NutriAI</p>
+        <h1>Профил за хранителен план</h1>
+        <p>Избери параметрите си и ще създадем дневни калории, макроси, вода и начална цел.</p>
+      </div>
+
+      <form id="profileForm" class="profile-form">
+        <div class="segmented" data-segment="gender">
+          <button type="button" data-value="Жена">Жена</button>
+          <button type="button" data-value="Мъж">Мъж</button>
+          <button type="button" data-value="Друго">Друго</button>
+        </div>
+        <input id="gender" type="hidden" value="Жена">
+
+        <label><span class="field-icon">🎂</span> Възраст <input id="age" type="number" min="13" max="100" value="30"></label>
+        <label><span class="field-icon">📏</span> Височина, см <input id="height" type="number" min="100" max="230" value="170"></label>
+        <label><span class="field-icon">⚖</span> Тегло, кг <input id="weight" type="number" min="30" max="250" step="0.1" value="70"></label>
+        <label><span class="field-icon">🎯</span> Целево тегло, кг <input id="targetWeight" type="number" min="30" max="250" step="0.1" value="65"></label>
+        <label><span class="field-icon">🏃</span> Активност
+          <select id="activity">
+            <option value="1.2">Заседнал</option>
+            <option value="1.375">Лека</option>
+            <option value="1.55" selected>Умерена</option>
+            <option value="1.725">Висока</option>
+            <option value="1.9">Екстремна</option>
+          </select>
+        </label>
+        <label><span class="field-icon">🔥</span> Цел
+          <select id="goal">
+            <option>Отслабване</option>
+            <option>Поддържане</option>
+            <option>Покачване</option>
+          </select>
+        </label>
+        <label><span class="field-icon">🍽</span> Дневен лимит, kcal <input id="dailyLimit" type="number" min="1200" max="6000" step="50" value="1800"></label>
+        <button class="primary setup-button" type="submit">✨ Създай хранителен план</button>
+      </form>
+
+      <div class="metrics" id="metrics"></div>
+      <div id="nutritionPlan" class="plan-list"></div>
+    </div>
+  </section>
+
+  <div class="phone-app hidden">
     <header class="app-header">
       <div>
         <p class="eyebrow">Вашият AI диетолог</p>
@@ -46,7 +92,7 @@
 
         <article class="ios-card hydration-card">
           <div class="card-title-row">
-            <h2>Хидратация</h2>
+            <h2><span class="title-icon">💧</span> Хидратация</h2>
             <span id="waterStatus">0 / 0 мл</span>
           </div>
           <div class="water-meter"><span id="waterMeter"></span></div>
@@ -58,48 +104,11 @@
 
         <article class="ios-card">
           <div class="card-title-row">
-            <h2>Днешни хранения</h2>
-            <button class="text-button" data-jump="camera">+ Добави</button>
+            <h2><span class="title-icon">🍽</span> Днешни хранения</h2>
+            <button class="text-button" data-jump="camera">＋ Добави</button>
           </div>
           <div id="todayMeals" class="today-list"></div>
         </article>
-
-        <details class="ios-card profile-details">
-          <summary>Профил и хранителен план</summary>
-          <form id="profileForm" class="profile-form">
-            <div class="segmented" data-segment="gender">
-              <button type="button" data-value="Жена">Жена</button>
-              <button type="button" data-value="Мъж">Мъж</button>
-              <button type="button" data-value="Друго">Друго</button>
-            </div>
-            <input id="gender" type="hidden" value="Жена">
-
-            <label>Възраст <input id="age" type="number" min="13" max="100" value="30"></label>
-            <label>Височина, см <input id="height" type="number" min="100" max="230" value="170"></label>
-            <label>Тегло, кг <input id="weight" type="number" min="30" max="250" step="0.1" value="70"></label>
-            <label>Целево тегло, кг <input id="targetWeight" type="number" min="30" max="250" step="0.1" value="65"></label>
-            <label>Активност
-              <select id="activity">
-                <option value="1.2">Заседнал</option>
-                <option value="1.375">Лека</option>
-                <option value="1.55" selected>Умерена</option>
-                <option value="1.725">Висока</option>
-                <option value="1.9">Екстремна</option>
-              </select>
-            </label>
-            <label>Цел
-              <select id="goal">
-                <option>Отслабване</option>
-                <option>Поддържане</option>
-                <option>Покачване</option>
-              </select>
-            </label>
-            <label>Дневен лимит, kcal <input id="dailyLimit" type="number" min="1200" max="6000" step="50" value="1800"></label>
-            <button class="primary" type="submit">Изчисли и запази</button>
-          </form>
-          <div class="metrics" id="metrics"></div>
-          <div id="nutritionPlan" class="plan-list"></div>
-        </details>
       </section>
 
       <section class="view" id="view-camera" data-title="Камера за храна">
@@ -107,7 +116,7 @@
           <label class="photo-frame" for="foodImage">
             <input id="foodImage" type="file" accept="image/*" capture="environment">
             <img id="preview" alt="Преглед на снимката">
-            <span id="photoPlaceholder">📷<br>Направете снимка или изберете от галерия</span>
+            <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
           </label>
 
           <div class="segmented meal-tabs">
@@ -119,7 +128,7 @@
           <input id="mealType" type="hidden" value="lunch">
 
           <details class="api-details">
-            <summary>Groq API ключ</summary>
+            <summary>🔑 Groq API ключ</summary>
             <div class="api-row">
               <input id="apiKey" type="password" placeholder="gsk_..." autocomplete="off">
               <button id="saveApiKey" class="secondary">Запази</button>
@@ -133,7 +142,7 @@
 
         <article class="ios-card hidden" id="analysisPanel">
           <div class="card-title-row">
-            <h2>Резултат</h2>
+            <h2><span class="title-icon">✨</span> Резултат</h2>
             <strong id="analysisCalories"></strong>
           </div>
           <div id="analysisSummary"></div>
@@ -144,7 +153,7 @@
 
       <section class="view" id="view-history" data-title="История">
         <article class="ios-card">
-          <h2>История на храненията</h2>
+          <h2><span class="title-icon">🧾</span> История на храненията</h2>
           <div id="mealHistory" class="history-list"></div>
         </article>
       </section>
@@ -153,13 +162,13 @@
         <div class="progress-mini-grid" id="progressCards"></div>
         <article class="ios-card">
           <div class="card-title-row">
-            <h2>История на теглото</h2>
+            <h2><span class="title-icon">📈</span> История на теглото</h2>
             <span id="weightGoalLabel"></span>
           </div>
           <canvas id="weightChart" width="700" height="300"></canvas>
         </article>
         <article class="ios-card">
-          <h2>Въведи тегло за днес</h2>
+          <h2><span class="title-icon">⚖</span> Въведи тегло за днес</h2>
           <form id="weightForm" class="inline-form">
             <input id="weightEntry" type="number" min="30" max="250" step="0.1" placeholder="74.5">
             <button class="primary" type="submit">Запиши</button>
@@ -179,11 +188,11 @@
     </main>
 
     <nav class="tabbar" aria-label="Основна навигация">
-      <button class="tab active" data-view="dashboard"><span>♥</span>Днес</button>
-      <button class="tab" data-view="camera"><span>●</span>Камера</button>
-      <button class="tab" data-view="progress"><span>▥</span>Прогрес</button>
-      <button class="tab" data-view="history"><span>☰</span>История</button>
-      <button class="tab" data-view="chat"><span>✦</span>AI</button>
+      <button class="tab active" data-view="dashboard"><span>🏠</span>Днес</button>
+      <button class="tab" data-view="camera"><span>📷</span>Камера</button>
+      <button class="tab" data-view="progress"><span>📈</span>Прогрес</button>
+      <button class="tab" data-view="history"><span>🧾</span>История</button>
+      <button class="tab" data-view="chat"><span>💬</span>AI</button>
     </nav>
   </div>
 
