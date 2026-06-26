@@ -1,0 +1,12 @@
+{
+  "name": "nutriai-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NutriAI browser app with optional serverless Groq proxy.",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
