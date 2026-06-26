@@ -11,6 +11,7 @@ const state = {
   ]),
   water: load("nutriai.water", { date: new Date().toDateString(), amount: 0 }),
   apiKey: localStorage.getItem("nutriai.groqApiKey") || localStorage.getItem("nutriai.apiKey") || "",
+  aiPlan: load("nutriai.aiPlan", null),
   selectedImageDataUrl: "",
   lastAnalysis: null
 };
@@ -26,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindSegments();
   bindProgress();
   bindChat();
+  bindPlanActions();
   hydrateProfileForm();
   updateAppVisibility();
   renderAll();
@@ -127,7 +129,7 @@ function restoreTheme() {
 }
 
 function bindProfile() {
-  $("profileForm").addEventListener("submit", (event) => {
+  $("profileForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const activitySelect = $("activity");
     state.profile = {
@@ -148,6 +150,7 @@ function bindProfile() {
     save("nutriai.profile", state.profile);
     updateAppVisibility();
     renderAll();
+    await generateAIPlan(true);
   });
 }
 
@@ -166,7 +169,6 @@ function hydrateProfileForm() {
   $("activity").value = String(state.profile.activity);
   $("goal").value = state.profile.goal;
   $("dailyLimit").value = state.profile.dailyLimit;
-  $("apiKey").value = state.apiKey;
   $("weightEntry").value = state.weights.at(-1)?.weight || state.profile.weight;
 }
 
@@ -214,6 +216,10 @@ function renderAll() {
   drawWeightChart();
 }
 
+function bindPlanActions() {
+  $("refreshPlan").addEventListener("click", () => generateAIPlan(true));
+}
+
 function renderDashboard() {
   resetWaterIfNeeded();
   const targets = calculateTargets(state.profile);
@@ -250,16 +256,120 @@ function renderDashboard() {
   ];
   $("metrics").innerHTML = metrics.map(([label, value]) => metricHtml(label, value)).join("");
 
-  const plan = [
-    `Закуска: протеин + плод + пълнозърнест източник според лимита от ${limit} kcal.`,
-    "Обяд: чист протеин, зеленчуци и умерена порция картофи, ориз или бобови.",
-    "Следобед: кисело мляко, плод или малка порция ядки.",
-    "Вечеря: риба, пилешко, яйца, тофу или бобови със зеленчуци.",
-    "Избягвай опасни крайни диети. Целта е устойчив, балансиран режим."
-  ];
-  $("nutritionPlan").innerHTML = plan.map((item) => `<div class="plan-item"><span>${escapeHtml(item)}</span></div>`).join("");
+  renderAIPlan();
   renderTodayMeals();
   renderProgressCards(targets);
+}
+
+async function generateAIPlan(force = false) {
+  if (state.aiPlan && !force) {
+    renderAIPlan();
+    return;
+  }
+
+  const targets = calculateTargets(state.profile);
+  state.aiPlan = {
+    title: "Генерирам персонален режим...",
+    days: [],
+    tips: ["Моля, изчакайте няколко секунди."]
+  };
+  renderAIPlan();
+
+  const prompt = `Създай персонален, безопасен хранителен режим на български.
+Профил:
+- Пол: ${state.profile.gender}
+- Възраст: ${state.profile.age}
+- Височина: ${state.profile.height} см
+- Тегло: ${state.profile.weight} кг
+- Желано тегло: ${state.profile.targetWeight} кг
+- Активност: ${state.profile.activityLabel}
+- Цел: ${state.profile.goal}
+- Калории: ${state.profile.dailyLimit} kcal
+- Протеини: ${targets.protein} г
+- Мазнини: ${targets.fat} г
+- Въглехидрати: ${targets.carbs} г
+- Фибри: ${targets.fiber} г
+- Вода: ${targets.water} мл
+
+Не препоръчвай опасни диети. Направи кратък, практичен режим за 1 ден с 4 хранения.
+Върни само JSON:
+{"title":"","days":[{"meal":"","food":"","calories":0,"note":""}],"tips":[]}`;
+
+  try {
+    const data = await callGroq([
+      {
+        role: "system",
+        content: "Ти си експерт нутриционист. Връщай само валиден JSON на български."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ], true);
+    state.aiPlan = normalizePlan(parseGroqJsonLoose(data));
+  } catch {
+    state.aiPlan = fallbackPlan(targets);
+  }
+
+  save("nutriai.aiPlan", state.aiPlan);
+  renderAIPlan();
+}
+
+function renderAIPlan() {
+  const target = $("aiMealPlan");
+  if (!target) return;
+  const plan = state.aiPlan || fallbackPlan(calculateTargets(state.profile));
+  const meals = Array.isArray(plan.days) ? plan.days : [];
+  const tips = Array.isArray(plan.tips) ? plan.tips : [];
+  target.innerHTML = `
+    <div class="plan-heading">${escapeHtml(plan.title || "Персонален хранителен режим")}</div>
+    ${meals.map((item) => `
+      <div class="plan-item plan-meal">
+        <div>
+          <strong>${escapeHtml(item.meal || "Хранене")}</strong>
+          <span>${escapeHtml(item.food || "")}</span>
+          ${item.note ? `<small>${escapeHtml(item.note)}</small>` : ""}
+        </div>
+        <b>${Math.round(numberFrom(item.calories)) || ""} kcal</b>
+      </div>
+    `).join("")}
+    ${tips.map((tip) => `<div class="plan-item"><span>${escapeHtml(tip)}</span></div>`).join("")}
+  `;
+
+  const setupPlan = $("nutritionPlan");
+  if (setupPlan && !state.profile.hasCompletedSetup) {
+    setupPlan.innerHTML = target.innerHTML;
+  }
+}
+
+function normalizePlan(raw) {
+  return {
+    title: String(raw.title || raw.summary || "Персонален хранителен режим"),
+    days: Array.isArray(raw.days) ? raw.days.map((item) => ({
+      meal: String(item.meal || item.name || "Хранене"),
+      food: String(item.food || item.description || ""),
+      calories: numberFrom(item.calories ?? item.kcal),
+      note: String(item.note || "")
+    })) : [],
+    tips: Array.isArray(raw.tips) ? raw.tips.map(String) : []
+  };
+}
+
+function fallbackPlan(targets) {
+  return {
+    title: `Режим за ${state.profile.goal.toLowerCase()} • ${state.profile.dailyLimit} kcal`,
+    days: [
+      { meal: "Закуска", food: "Яйца или кисело мляко с овес и плод", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Протеин + бавни въглехидрати" },
+      { meal: "Обяд", food: "Пилешко, риба, тофу или бобови със салата и ориз/картофи", calories: Math.round(state.profile.dailyLimit * 0.35), note: "Основно хранене с фибри" },
+      { meal: "Следобед", food: "Плод с ядки или протеиново кисело мляко", calories: Math.round(state.profile.dailyLimit * 0.15), note: "Лека закуска" },
+      { meal: "Вечеря", food: "Чист протеин със зеленчуци и малка порция въглехидрати", calories: Math.round(state.profile.dailyLimit * 0.25), note: "По-лека вечеря" }
+    ],
+    tips: [
+      `Цел протеин: около ${targets.protein} г дневно.`,
+      `Пий около ${targets.water} мл вода дневно.`,
+      "Избягвай крайни диети; търси постоянство и балансирани порции."
+    ]
+  };
 }
 
 function metricHtml(label, value) {
@@ -330,12 +440,6 @@ function getBMIColor(bmi) {
 }
 
 function bindCamera() {
-  $("saveApiKey").addEventListener("click", () => {
-    state.apiKey = $("apiKey").value.trim();
-    localStorage.setItem("nutriai.groqApiKey", state.apiKey);
-    $("analysisStatus").textContent = "API ключът е запазен локално.";
-  });
-
   $("foodImage").addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -365,10 +469,8 @@ function bindCamera() {
 }
 
 async function analyzeFood() {
-  state.apiKey = $("apiKey").value.trim() || state.apiKey;
-  const canUseProxy = location.hostname && !location.hostname.endsWith("github.io");
-  if (!state.apiKey && !canUseProxy) {
-    $("analysisStatus").textContent = "Добави Groq API ключ или използвай deployment с /api/groq proxy.";
+  if (!canUseServerProxy() && !state.apiKey) {
+    $("analysisStatus").textContent = "AI анализът работи автоматично през Vercel, когато е настроен GROQ_API_KEY.";
     return;
   }
   if (!state.selectedImageDataUrl) {
@@ -461,12 +563,15 @@ async function callGroq(messages, jsonMode = false) {
     body.response_format = { type: "json_object" };
   }
 
-  const useProxy = !state.apiKey && location.hostname && !location.hostname.endsWith("github.io") && location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+  const useProxy = canUseServerProxy() && !state.apiKey;
   const endpoint = useProxy ? "/api/groq" : "https://api.groq.com/openai/v1/chat/completions";
   const headers = {
     "Content-Type": "application/json"
   };
   if (!useProxy) {
+    if (!state.apiKey) {
+      throw new Error("Липсва Groq ключ. Във Vercel добави Environment Variable GROQ_API_KEY.");
+    }
     headers.Authorization = `Bearer ${state.apiKey}`;
   }
 
@@ -483,7 +588,15 @@ async function callGroq(messages, jsonMode = false) {
   return data;
 }
 
+function canUseServerProxy() {
+  return Boolean(location.hostname) && !location.hostname.endsWith("github.io") && location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+}
+
 function parseGroqJson(data) {
+  return normalizeAnalysis(parseGroqJsonLoose(data));
+}
+
+function parseGroqJsonLoose(data) {
   const text = data.choices?.[0]?.message?.content || "";
   if (!text.trim()) throw new Error("AI не върна текстов резултат.");
   const cleaned = text
@@ -491,8 +604,7 @@ function parseGroqJson(data) {
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "");
-  const parsed = JSON.parse(cleaned);
-  return normalizeAnalysis(parsed);
+  return JSON.parse(cleaned);
 }
 
 function normalizeAnalysis(raw) {
@@ -640,9 +752,8 @@ function bindChat() {
     event.preventDefault();
     const text = $("chatInput").value.trim();
     if (!text) return;
-    if (!state.apiKey) state.apiKey = $("apiKey").value.trim();
-    if (!state.apiKey && (!location.hostname || location.hostname.endsWith("github.io"))) {
-      alert("Добави Groq API ключ в екрана Снимка или използвай deployment с backend proxy.");
+    if (!canUseServerProxy() && !state.apiKey) {
+      alert("AI чатът работи автоматично през Vercel, когато е настроен GROQ_API_KEY.");
       return;
     }
 

@@ -109,6 +109,14 @@
           </div>
           <div id="todayMeals" class="today-list"></div>
         </article>
+
+        <article class="ios-card">
+          <div class="card-title-row">
+            <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
+            <button class="text-button" id="refreshPlan">↻ Нов</button>
+          </div>
+          <div id="aiMealPlan" class="plan-list"></div>
+        </article>
       </section>
 
       <section class="view" id="view-camera" data-title="Камера за храна">
@@ -126,15 +134,6 @@
             <button type="button" data-meal="snack">Снак</button>
           </div>
           <input id="mealType" type="hidden" value="lunch">
-
-          <details class="api-details">
-            <summary>🔑 Groq API ключ</summary>
-            <div class="api-row">
-              <input id="apiKey" type="password" placeholder="gsk_..." autocomplete="off">
-              <button id="saveApiKey" class="secondary">Запази</button>
-            </div>
-            <p class="hint">Ключът е от console.groq.com. За публична версия използвай Vercel с `GROQ_API_KEY`.</p>
-          </details>
 
           <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
           <p id="analysisStatus" class="status-line"></p>

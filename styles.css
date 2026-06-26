@@ -391,11 +391,6 @@ h2 {
   white-space: nowrap;
 }
 
-.api-details summary {
-  cursor: pointer;
-  font-weight: 800;
-}
-
 .profile-form {
   display: grid;
   gap: 12px;
@@ -476,8 +471,7 @@ select {
   padding: 20px;
 }
 
-.meal-tabs,
-.api-details {
+.meal-tabs {
   margin-top: 14px;
 }
 
