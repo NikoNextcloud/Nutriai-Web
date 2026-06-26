@@ -17,8 +17,13 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
+const DB_NAME = "nutriai-storage";
+const DB_VERSION = 1;
+const DB_STORE = "keyval";
+let dbPromise = null;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await hydratePersistentState();
   restoreTheme();
   bindNavigation();
   bindProfile();
@@ -57,7 +62,94 @@ function load(key, fallback) {
 }
 
 function save(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  saveLocal(key, value);
+  const persistentSave = savePersistent(key, value);
+  persistentSave.catch((error) => console.warn("IndexedDB save failed", error));
+  return persistentSave;
+}
+
+function saveLocal(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    if (key === "nutriai.meals") {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Ignore localStorage cleanup failures; IndexedDB remains the primary store.
+      }
+    } else {
+      console.warn("localStorage save failed", error);
+    }
+  }
+}
+
+async function hydratePersistentState() {
+  const values = await Promise.all([
+    loadPersistent("nutriai.profile", state.profile),
+    loadPersistent("nutriai.meals", state.meals),
+    loadPersistent("nutriai.weights", state.weights),
+    loadPersistent("nutriai.messages", state.messages),
+    loadPersistent("nutriai.water", state.water),
+    loadPersistent("nutriai.aiPlan", state.aiPlan)
+  ]);
+
+  [
+    state.profile,
+    state.meals,
+    state.weights,
+    state.messages,
+    state.water,
+    state.aiPlan
+  ] = values;
+}
+
+async function loadPersistent(key, fallback) {
+  try {
+    const value = await idbGet(key);
+    if (value !== undefined) return value;
+    await savePersistent(key, fallback);
+  } catch (error) {
+    console.warn("IndexedDB load failed", error);
+  }
+  return fallback;
+}
+
+function openDatabase() {
+  if (dbPromise) return dbPromise;
+  if (!("indexedDB" in window)) {
+    dbPromise = Promise.reject(new Error("IndexedDB is not available"));
+    return dbPromise;
+  }
+
+  dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(DB_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  return dbPromise;
+}
+
+async function idbGet(key) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function savePersistent(key, value) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(DB_STORE, "readwrite").objectStore(DB_STORE).put(value, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
 }
 
 function bindNavigation() {
@@ -451,21 +543,43 @@ function bindCamera() {
   });
 
   $("analyzeButton").addEventListener("click", analyzeFood);
-  $("saveMeal").addEventListener("click", () => {
-    if (!state.lastAnalysis) return;
-    const title = state.lastAnalysis.foods?.[0]?.name || "Хранене";
-    state.meals.unshift({
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      title,
-      mealType: $("mealType").value,
-      image: state.selectedImageDataUrl,
-      analysis: state.lastAnalysis
-    });
-    save("nutriai.meals", state.meals);
+  $("saveMeal").addEventListener("click", saveAnalyzedMeal);
+}
+
+async function saveAnalyzedMeal() {
+  if (!state.lastAnalysis) {
+    $("analysisStatus").textContent = "Първо анализирай снимката.";
+    return;
+  }
+
+  const button = $("saveMeal");
+  button.disabled = true;
+  $("analysisStatus").textContent = "Запазвам в дневника...";
+
+  const title = state.lastAnalysis.foods?.[0]?.name || "Хранене";
+  const meal = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title,
+    mealType: $("mealType").value,
+    image: state.selectedImageDataUrl,
+    analysis: structuredClone(state.lastAnalysis)
+  };
+
+  state.meals.unshift(meal);
+
+  try {
+    await save("nutriai.meals", state.meals);
     renderAll();
-    $("analysisStatus").textContent = "Храненето е запазено.";
-  });
+    $("analysisStatus").textContent = "Храненето е добавено към дневника.";
+    document.querySelector('.tab[data-view="dashboard"]')?.click();
+  } catch (error) {
+    state.meals = state.meals.filter((item) => item.id !== meal.id);
+    $("analysisStatus").textContent = "Не успях да запазя храненето. Опитай отново.";
+    console.error(error);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function analyzeFood() {
@@ -660,13 +774,19 @@ function mealRowHtml(meal, includeDate = false) {
   const mealType = mealTypeLabel(meal.mealType);
   return `
     <div class="meal-row">
-      <div>
+      ${mealImageHtml(meal)}
+      <div class="meal-row-main">
         <strong>${mealTypeIcon(meal.mealType)} ${escapeHtml(meal.title)}</strong>
         <p>${escapeHtml(time)} • ${escapeHtml(mealType)} • ${escapeHtml(meal.analysis.rating || "")}</p>
       </div>
       <strong>+${Math.round(meal.analysis.totalCalories || 0)} kcal</strong>
     </div>
   `;
+}
+
+function mealImageHtml(meal) {
+  if (!meal.image || !String(meal.image).startsWith("data:image/")) return "";
+  return '<img class="meal-thumb" src="' + meal.image + '" alt="Запазена снимка на хранене">';
 }
 
 function mealTypeIcon(type) {

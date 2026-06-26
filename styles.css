@@ -380,6 +380,23 @@ h2 {
   background: var(--card-2);
 }
 
+.meal-row {
+  align-items: center;
+}
+
+.meal-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
 .meal-row p {
   margin: 3px 0 0;
   color: var(--muted);
