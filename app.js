@@ -386,7 +386,8 @@ async function analyzeFood() {
 Оставащи калории преди това хранене: ${Math.round(remaining)}.
 Не измисляй факти. Ако количеството не е сигурно, отбележи, че е ориентировъчна оценка.
 Върни само JSON със структура:
-{"foods":[],"totalCalories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"rating":"","reason":"","remainingCalories":0,"recommendation":""}`;
+{"foods":[{"name":"","estimatedGrams":0,"calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"confidenceNote":""}],"totalCalories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"rating":"","reason":"","remainingCalories":0,"recommendation":""}
+Не използвай markdown, code block или обяснение извън JSON.`;
 
   try {
     const result = await callGroq([
@@ -405,7 +406,6 @@ async function analyzeFood() {
 
     state.lastAnalysis = parseGroqJson(result);
     renderAnalysisSummary(state.lastAnalysis);
-    $("analysisJson").textContent = JSON.stringify(state.lastAnalysis, null, 2);
     $("analysisPanel").classList.remove("hidden");
     $("analysisStatus").textContent = "Готово.";
   } catch (error) {
@@ -417,16 +417,34 @@ async function analyzeFood() {
 
 function renderAnalysisSummary(analysis) {
   $("analysisCalories").textContent = `${Math.round(analysis.totalCalories || 0)} kcal`;
+  const foodsHtml = analysis.foods?.length
+    ? `<div class="food-list">${analysis.foods.map(foodItemHtml).join("")}</div>`
+    : `<div class="empty-copy">Не са разпознати конкретни храни. Опитайте с по-ясна снимка.</div>`;
   $("analysisSummary").innerHTML = `
-    <h3>${escapeHtml(analysis.rating || "Анализ")}</h3>
-    <p class="hint">${escapeHtml(analysis.reason || "")}</p>
+    <div class="analysis-headline">
+      <h3>${escapeHtml(analysis.rating || "Анализ")}</h3>
+      <p>${escapeHtml(analysis.reason || "Ориентировъчна оценка на храната от снимката.")}</p>
+    </div>
     <div class="analysis-pills">
       <div class="pill"><span>Протеини</span><strong>${Math.round(analysis.protein || 0)}g</strong></div>
       <div class="pill"><span>Въгл.</span><strong>${Math.round(analysis.carbs || 0)}g</strong></div>
       <div class="pill"><span>Мазнини</span><strong>${Math.round(analysis.fat || 0)}g</strong></div>
       <div class="pill"><span>Фибри</span><strong>${Math.round(analysis.fiber || 0)}g</strong></div>
     </div>
-    ${analysis.recommendation ? `<div class="plan-item"><span>${escapeHtml(analysis.recommendation)}</span></div>` : ""}
+    ${foodsHtml}
+    ${analysis.recommendation ? `<div class="recommendation-box"><strong>💡 Препоръка</strong><span>${escapeHtml(analysis.recommendation)}</span></div>` : ""}
+  `;
+}
+
+function foodItemHtml(food) {
+  return `
+    <div class="food-row">
+      <div>
+        <strong>${escapeHtml(food.name || "Храна")}</strong>
+        <p>${Math.round(food.estimatedGrams || 0)} г • ${escapeHtml(food.confidenceNote || "ориентировъчна оценка")}</p>
+      </div>
+      <span>${Math.round(food.calories || 0)} kcal</span>
+    </div>
   `;
 }
 
@@ -468,7 +486,53 @@ async function callGroq(messages, jsonMode = false) {
 function parseGroqJson(data) {
   const text = data.choices?.[0]?.message?.content || "";
   if (!text.trim()) throw new Error("AI не върна текстов резултат.");
-  return JSON.parse(text.replace(/^```json\s*|\s*```$/g, ""));
+  const cleaned = text
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "");
+  const parsed = JSON.parse(cleaned);
+  return normalizeAnalysis(parsed);
+}
+
+function normalizeAnalysis(raw) {
+  const foods = Array.isArray(raw.foods) ? raw.foods.map((food) => ({
+    name: String(food.name || food.food || food.title || "Храна"),
+    estimatedGrams: numberFrom(food.estimatedGrams ?? food.grams ?? food.quantityGrams ?? food.amountGrams),
+    calories: numberFrom(food.calories ?? food.kcal ?? food.energy),
+    protein: numberFrom(food.protein ?? food.proteins),
+    carbs: numberFrom(food.carbs ?? food.carbohydrates),
+    fat: numberFrom(food.fat ?? food.fats),
+    fiber: numberFrom(food.fiber ?? food.fibre),
+    confidenceNote: String(food.confidenceNote || food.note || food.uncertainty || "Ориентировъчна оценка")
+  })) : [];
+
+  const totals = foods.reduce((sum, food) => {
+    sum.totalCalories += food.calories;
+    sum.protein += food.protein;
+    sum.carbs += food.carbs;
+    sum.fat += food.fat;
+    sum.fiber += food.fiber;
+    return sum;
+  }, { totalCalories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+
+  return {
+    foods,
+    totalCalories: numberFrom(raw.totalCalories ?? raw.calories ?? raw.kcal) || totals.totalCalories,
+    protein: numberFrom(raw.protein ?? raw.proteins) || totals.protein,
+    carbs: numberFrom(raw.carbs ?? raw.carbohydrates) || totals.carbs,
+    fat: numberFrom(raw.fat ?? raw.fats) || totals.fat,
+    fiber: numberFrom(raw.fiber ?? raw.fibre) || totals.fiber,
+    rating: String(raw.rating || "🟡 Добър избор"),
+    reason: String(raw.reason || raw.summary || "Ориентировъчна AI оценка според снимката."),
+    remainingCalories: numberFrom(raw.remainingCalories),
+    recommendation: String(raw.recommendation || raw.advice || "")
+  };
+}
+
+function numberFrom(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function renderHistory() {
