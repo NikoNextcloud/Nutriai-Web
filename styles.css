@@ -357,7 +357,8 @@ h2 {
 .today-list,
 .history-list,
 .metrics,
-.plan-list {
+.plan-list,
+.goal-list {
   display: grid;
   gap: 10px;
 }
@@ -765,5 +766,39 @@ canvas {
     border-radius: 30px;
     background: var(--bg);
     box-shadow: 0 26px 80px rgba(0, 0, 0, 0.16);
+  }
+}
+
+.goal-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.goal-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card-2);
+}
+
+.goal-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.goal-item strong {
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.dashboard-edit {
+  margin-top: 2px;
+}
+
+@media (max-width: 390px) {
+  .goal-list {
+    grid-template-columns: 1fr;
   }
 }

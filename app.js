@@ -12,6 +12,7 @@ const state = {
   water: load("nutriai.water", { date: new Date().toDateString(), amount: 0 }),
   apiKey: localStorage.getItem("nutriai.groqApiKey") || localStorage.getItem("nutriai.apiKey") || "",
   aiPlan: load("nutriai.aiPlan", null),
+  aiPlanVariant: load("nutriai.aiPlanVariant", 0),
   selectedImageDataUrl: "",
   lastAnalysis: null
 };
@@ -33,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProgress();
   bindChat();
   bindPlanActions();
+  bindProfileEditor();
   hydrateProfileForm();
   updateAppVisibility();
   renderAll();
@@ -91,7 +93,8 @@ async function hydratePersistentState() {
     loadPersistent("nutriai.weights", state.weights),
     loadPersistent("nutriai.messages", state.messages),
     loadPersistent("nutriai.water", state.water),
-    loadPersistent("nutriai.aiPlan", state.aiPlan)
+    loadPersistent("nutriai.aiPlan", state.aiPlan),
+    loadPersistent("nutriai.aiPlanVariant", state.aiPlanVariant)
   ]);
 
   [
@@ -100,7 +103,8 @@ async function hydratePersistentState() {
     state.weights,
     state.messages,
     state.water,
-    state.aiPlan
+    state.aiPlan,
+    state.aiPlanVariant
   ] = values;
 }
 
@@ -192,6 +196,17 @@ function bindSegments() {
       $("mealType").value = button.dataset.meal;
       document.querySelectorAll("[data-meal]").forEach((item) => item.classList.toggle("active", item === button));
     });
+  });
+}
+
+function bindProfileEditor() {
+  const button = $("editProfileButton");
+  if (!button) return;
+  button.addEventListener("click", () => {
+    hydrateProfileForm();
+    $("onboardingScreen").classList.remove("hidden");
+    document.querySelector(".phone-app").classList.add("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
 
@@ -309,7 +324,11 @@ function renderAll() {
 }
 
 function bindPlanActions() {
-  $("refreshPlan").addEventListener("click", () => generateAIPlan(true));
+  $("refreshPlan").addEventListener("click", () => {
+    state.aiPlanVariant = Number(state.aiPlanVariant || 0) + 1;
+    save("nutriai.aiPlanVariant", state.aiPlanVariant);
+    generateAIPlan(true);
+  });
 }
 
 function renderDashboard() {
@@ -349,6 +368,7 @@ function renderDashboard() {
   $("metrics").innerHTML = metrics.map(([label, value]) => metricHtml(label, value)).join("");
 
   renderAIPlan();
+  renderGoalSuggestions(targets);
   renderTodayMeals();
   renderProgressCards(targets);
 }
@@ -360,6 +380,8 @@ async function generateAIPlan(force = false) {
   }
 
   const targets = calculateTargets(state.profile);
+  const variant = Number(state.aiPlanVariant || 0);
+  const focus = planFocus(variant);
   state.aiPlan = {
     title: "Генерирам персонален режим...",
     days: [],
@@ -367,31 +389,34 @@ async function generateAIPlan(force = false) {
   };
   renderAIPlan();
 
-  const prompt = `Създай персонален, безопасен хранителен режим на български.
-Профил:
-- Пол: ${state.profile.gender}
-- Възраст: ${state.profile.age}
-- Височина: ${state.profile.height} см
-- Тегло: ${state.profile.weight} кг
-- Желано тегло: ${state.profile.targetWeight} кг
-- Активност: ${state.profile.activityLabel}
-- Цел: ${state.profile.goal}
-- Калории: ${state.profile.dailyLimit} kcal
-- Протеини: ${targets.protein} г
-- Мазнини: ${targets.fat} г
-- Въглехидрати: ${targets.carbs} г
-- Фибри: ${targets.fiber} г
-- Вода: ${targets.water} мл
-
-Не препоръчвай опасни диети. Направи кратък, практичен режим за 1 ден с 4 хранения.
-Върни само JSON:
-{"title":"","days":[{"meal":"","food":"","calories":0,"note":""}],"tips":[]}`;
+  const prompt = [
+    "Създай персонален, безопасен хранителен режим на български.",
+    "Профил:",
+    `- Пол: ${state.profile.gender}`,
+    `- Възраст: ${state.profile.age}`,
+    `- Височина: ${state.profile.height} см`,
+    `- Тегло: ${state.profile.weight} кг`,
+    `- Желано тегло: ${state.profile.targetWeight} кг`,
+    `- Активност: ${state.profile.activityLabel}`,
+    `- Цел: ${state.profile.goal}`,
+    `- Калории: ${state.profile.dailyLimit} kcal`,
+    `- Протеини: ${targets.protein} г`,
+    `- Мазнини: ${targets.fat} г`,
+    `- Въглехидрати: ${targets.carbs} г`,
+    `- Фибри: ${targets.fiber} г`,
+    `- Вода: ${targets.water} мл`,
+    "",
+    `Направи различно предложение от предишното. Вариант: ${variant}. Фокус: ${focus}.`,
+    "Не препоръчвай опасни диети. Направи кратък, практичен режим за 1 ден с 4 хранения.",
+    "Върни само JSON:",
+    JSON.stringify({ title: "", days: [{ meal: "", food: "", calories: 0, note: "" }], tips: [] })
+  ].join("\n");
 
   try {
     const data = await callGroq([
       {
         role: "system",
-        content: "Ти си експерт нутриционист. Връщай само валиден JSON на български."
+        content: "Ти си експерт нутриционист. Връщай само валиден JSON на български. Всяко ново генериране трябва да е осезаемо различно като храни."
       },
       {
         role: "user",
@@ -400,13 +425,12 @@ async function generateAIPlan(force = false) {
     ], true);
     state.aiPlan = normalizePlan(parseGroqJsonLoose(data));
   } catch {
-    state.aiPlan = fallbackPlan(targets);
+    state.aiPlan = fallbackPlan(targets, variant);
   }
 
   save("nutriai.aiPlan", state.aiPlan);
   renderAIPlan();
 }
-
 function renderAIPlan() {
   const target = $("aiMealPlan");
   if (!target) return;
@@ -447,23 +471,83 @@ function normalizePlan(raw) {
   };
 }
 
-function fallbackPlan(targets) {
+function fallbackPlan(targets, variant = Number(state.aiPlanVariant || 0)) {
+  const variants = [
+    {
+      title: `Баланс за ${state.profile.goal.toLowerCase()} • ${state.profile.dailyLimit} kcal`,
+      days: [
+        { meal: "Закуска", food: "Кисело мляко с овес, горски плодове и малко ядки", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Протеин + бавни въглехидрати" },
+        { meal: "Обяд", food: "Пилешко или тофу със салата и ориз/картофи", calories: Math.round(state.profile.dailyLimit * 0.35), note: "Основно хранене с фибри" },
+        { meal: "Следобед", food: "Плод с извара или протеиново кисело мляко", calories: Math.round(state.profile.dailyLimit * 0.15), note: "Лека закуска" },
+        { meal: "Вечеря", food: "Риба, яйца или бобови със зеленчуци", calories: Math.round(state.profile.dailyLimit * 0.25), note: "По-лека вечеря" }
+      ]
+    },
+    {
+      title: `Средиземноморски вариант • ${state.profile.dailyLimit} kcal`,
+      days: [
+        { meal: "Закуска", food: "Омлет със зеленчуци и филия пълнозърнест хляб", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Засищащо начало" },
+        { meal: "Обяд", food: "Риба тон/сьомга със салата, нахут и лимонов дресинг", calories: Math.round(state.profile.dailyLimit * 0.35), note: "Повече омега мазнини" },
+        { meal: "Следобед", food: "Ябълка и шепа сурови ядки", calories: Math.round(state.profile.dailyLimit * 0.15), note: "Контролирана порция" },
+        { meal: "Вечеря", food: "Пуешко, пилешко или леща със задушени зеленчуци", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Протеин и фибри" }
+      ]
+    },
+    {
+      title: `Бърз практичен режим • ${state.profile.dailyLimit} kcal`,
+      days: [
+        { meal: "Закуска", food: "Протеинов шейк или скир с банан", calories: Math.round(state.profile.dailyLimit * 0.24), note: "Лесно за натоварен ден" },
+        { meal: "Обяд", food: "Купа с пилешко/боб, зеленчуци и булгур", calories: Math.round(state.profile.dailyLimit * 0.36), note: "Може да се подготви предварително" },
+        { meal: "Следобед", food: "Моркови, хумус и плод", calories: Math.round(state.profile.dailyLimit * 0.15), note: "Фибри без тежест" },
+        { meal: "Вечеря", food: "Извара/яйца или тофу със салата", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Лека и богата на протеин" }
+      ]
+    }
+  ];
+
+  const plan = variants[Math.abs(variant) % variants.length];
   return {
-    title: `Режим за ${state.profile.goal.toLowerCase()} • ${state.profile.dailyLimit} kcal`,
-    days: [
-      { meal: "Закуска", food: "Яйца или кисело мляко с овес и плод", calories: Math.round(state.profile.dailyLimit * 0.25), note: "Протеин + бавни въглехидрати" },
-      { meal: "Обяд", food: "Пилешко, риба, тофу или бобови със салата и ориз/картофи", calories: Math.round(state.profile.dailyLimit * 0.35), note: "Основно хранене с фибри" },
-      { meal: "Следобед", food: "Плод с ядки или протеиново кисело мляко", calories: Math.round(state.profile.dailyLimit * 0.15), note: "Лека закуска" },
-      { meal: "Вечеря", food: "Чист протеин със зеленчуци и малка порция въглехидрати", calories: Math.round(state.profile.dailyLimit * 0.25), note: "По-лека вечеря" }
-    ],
+    ...plan,
     tips: [
       `Цел протеин: около ${targets.protein} г дневно.`,
       `Пий около ${targets.water} мл вода дневно.`,
-      "Избягвай крайни диети; търси постоянство и балансирани порции."
+      goalPaceText()
     ]
   };
 }
 
+function planFocus(variant) {
+  return ["повече протеин", "по-бързи храни за приготвяне", "средиземноморски стил", "по-бюджетни продукти"][Math.abs(variant) % 4];
+}
+
+function goalPaceText() {
+  const diff = Number(state.profile.weight) - Number(state.profile.targetWeight);
+  if (Math.abs(diff) < 1) return "Поддържай теглото със стабилни порции и редовно движение.";
+  if (diff > 0) return "Здравословна цел е около 0.3-0.7 кг надолу седмично.";
+  return "Здравословна цел е около 0.2-0.5 кг нагоре седмично.";
+}
+
+function renderGoalSuggestions(targets) {
+  const target = $("goalSuggestions");
+  if (!target) return;
+  const limit = state.profile.dailyLimit || targets.recommendedCalories;
+  const diff = Number(state.profile.weight) - Number(state.profile.targetWeight);
+  const direction = Math.abs(diff) < 1 ? "поддържане" : diff > 0 ? "отслабване" : "покачване";
+  const pace = Math.abs(diff) < 1 ? "стабилно тегло" : diff > 0 ? "0.3-0.7 кг надолу седмично" : "0.2-0.5 кг нагоре седмично";
+  const remainingKg = Math.abs(diff).toFixed(1).replace(".0", "");
+  const weeks = Math.max(2, Math.ceil(Math.abs(diff) / (diff > 0 ? 0.5 : 0.35)));
+  const timeline = Math.abs(diff) < 1 ? "следи средната стойност 2-3 седмици" : `ориентир: ${weeks} седмици`;
+
+  target.innerHTML = [
+    goalItem("Посока", direction),
+    goalItem("Калории", `около ${limit} kcal дневно`),
+    goalItem("Темпо", pace),
+    goalItem("До целта", Math.abs(diff) < 1 ? "целта е почти достигната" : `около ${remainingKg} кг • ${timeline}`),
+    goalItem("Протеин", `около ${targets.protein} г дневно`),
+    goalItem("Вода", `около ${targets.water} мл дневно`)
+  ].join("");
+}
+
+function goalItem(label, value) {
+  return `<div class="goal-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
 function metricHtml(label, value) {
   return `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`;
 }
