@@ -2,7 +2,14 @@ const state = {
   profile: load("nutriai.profile", defaultProfile()),
   meals: load("nutriai.meals", []),
   weights: load("nutriai.weights", []),
-  messages: load("nutriai.messages", []),
+  messages: load("nutriai.messages", [
+    {
+      role: "assistant",
+      text: "Здравейте! Аз съм вашият личен AI диетолог и нутриционист. Можете да ме питате за рецепти, калориен дефицит, алтернативи на храни или дневно меню.",
+      date: new Date().toISOString()
+    }
+  ]),
+  water: load("nutriai.water", { date: new Date().toDateString(), amount: 0 }),
   apiKey: localStorage.getItem("nutriai.groqApiKey") || localStorage.getItem("nutriai.apiKey") || "",
   selectedImageDataUrl: "",
   lastAnalysis: null
@@ -15,6 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
   bindNavigation();
   bindProfile();
   bindCamera();
+  bindHydration();
+  bindSegments();
   bindProgress();
   bindChat();
   hydrateProfileForm();
@@ -53,8 +62,16 @@ function bindNavigation() {
       const view = tab.dataset.view;
       document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item === tab));
       document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
-      $(`view-${view}`).classList.add("active");
+      const section = $(`view-${view}`);
+      section.classList.add("active");
+      $("screenTitle").textContent = section.dataset.title || "NutriAI";
       if (view === "progress") drawWeightChart();
+    });
+  });
+
+  document.querySelectorAll("[data-jump]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelector(`.tab[data-view="${button.dataset.jump}"]`)?.click();
     });
   });
 
@@ -63,6 +80,42 @@ function bindNavigation() {
     document.documentElement.dataset.theme = next;
     localStorage.setItem("nutriai.theme", next);
   });
+}
+
+function bindSegments() {
+  document.querySelectorAll("[data-segment='gender'] button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.value === state.profile.gender);
+    button.addEventListener("click", () => {
+      $("gender").value = button.dataset.value;
+      document.querySelectorAll("[data-segment='gender'] button").forEach((item) => item.classList.toggle("active", item === button));
+    });
+  });
+
+  document.querySelectorAll("[data-meal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      $("mealType").value = button.dataset.meal;
+      document.querySelectorAll("[data-meal]").forEach((item) => item.classList.toggle("active", item === button));
+    });
+  });
+}
+
+function bindHydration() {
+  $("addWater250").addEventListener("click", () => addWater(250));
+  $("addWater500").addEventListener("click", () => addWater(500));
+}
+
+function addWater(amount) {
+  resetWaterIfNeeded();
+  state.water.amount += amount;
+  save("nutriai.water", state.water);
+  renderDashboard();
+}
+
+function resetWaterIfNeeded() {
+  const today = new Date().toDateString();
+  if (state.water.date !== today) {
+    state.water = { date: today, amount: 0 };
+  }
 }
 
 function restoreTheme() {
@@ -152,14 +205,27 @@ function renderAll() {
 }
 
 function renderDashboard() {
+  resetWaterIfNeeded();
   const targets = calculateTargets(state.profile);
   const consumed = consumedToday();
+  const totals = macroTotalsToday();
   const limit = state.profile.dailyLimit || targets.recommendedCalories;
   const remaining = Math.round(limit - consumed);
   const percent = Math.min(Math.max(consumed / limit, 0), 1);
-  $("remainingCalories").textContent = `${remaining} kcal`;
-  $("caloriePercent").textContent = `${Math.round(percent * 100)}%`;
-  $("calorieRing").style.background = `conic-gradient(var(--accent) ${percent * 360}deg, rgba(148, 163, 184, 0.22) 0deg)`;
+  $("remainingCalories").textContent = `${Math.max(remaining, 0)}`;
+  $("consumedCalories").textContent = `${Math.round(consumed)}`;
+  $("targetCalories").textContent = `${limit}`;
+  $("calorieRing").style.background = `conic-gradient(var(--orange) ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
+
+  $("macroBars").innerHTML = [
+    macroCard("Протеин", totals.protein, targets.protein, "var(--orange)"),
+    macroCard("Въгл.", totals.carbs, targets.carbs, "var(--blue)"),
+    macroCard("Мазнини", totals.fat, targets.fat, "var(--yellow)")
+  ].join("");
+
+  const waterPercent = Math.min(state.water.amount / targets.water, 1);
+  $("waterStatus").textContent = `${state.water.amount} / ${targets.water} мл`;
+  $("waterMeter").style.width = `${waterPercent * 100}%`;
 
   const metrics = [
     ["BMI", targets.bmi],
@@ -182,10 +248,74 @@ function renderDashboard() {
     "Избягвай опасни крайни диети. Целта е устойчив, балансиран режим."
   ];
   $("nutritionPlan").innerHTML = plan.map((item) => `<div class="plan-item"><span>${escapeHtml(item)}</span></div>`).join("");
+  renderTodayMeals();
+  renderProgressCards(targets);
 }
 
 function metricHtml(label, value) {
   return `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`;
+}
+
+function macroCard(title, current, target, color) {
+  const percent = Math.min(Number(current || 0) / Math.max(Number(target || 1), 1), 1);
+  return `
+    <div class="macro-card">
+      <small>${escapeHtml(title)}</small>
+      <div class="macro-bar"><span style="height:${percent * 100}%;background:${color}"></span></div>
+      <strong>${Math.round(current || 0)} / ${Math.round(target || 0)}g</strong>
+    </div>
+  `;
+}
+
+function macroTotalsToday() {
+  const today = new Date().toDateString();
+  return state.meals
+    .filter((meal) => new Date(meal.date).toDateString() === today)
+    .reduce((sum, meal) => {
+      sum.protein += Number(meal.analysis.protein || 0);
+      sum.carbs += Number(meal.analysis.carbs || 0);
+      sum.fat += Number(meal.analysis.fat || 0);
+      sum.fiber += Number(meal.analysis.fiber || 0);
+      return sum;
+    }, { protein: 0, carbs: 0, fat: 0, fiber: 0 });
+}
+
+function renderTodayMeals() {
+  const today = new Date().toDateString();
+  const meals = state.meals.filter((meal) => new Date(meal.date).toDateString() === today);
+  if (!meals.length) {
+    $("todayMeals").innerHTML = `<div class="empty-copy">Все още нямате записани хранения за днес. Отидете на Камера, за да анализирате храната си.</div>`;
+    return;
+  }
+  $("todayMeals").innerHTML = meals.map((meal) => mealRowHtml(meal)).join("");
+}
+
+function renderProgressCards(targets) {
+  const bmiCategory = getBMICategory(targets.bmi);
+  $("progressCards").innerHTML = [
+    progressCard("BMI Индекс", targets.bmi, bmiCategory, getBMIColor(targets.bmi)),
+    progressCard("BMR", targets.bmr, "kcal / ден", "var(--orange)"),
+    progressCard("TDEE", targets.tdee, "kcal / ден", "var(--blue)")
+  ].join("");
+  $("weightGoalLabel").textContent = `Цел: ${state.profile.targetWeight} кг`;
+}
+
+function progressCard(title, value, desc, color) {
+  return `<div class="progress-mini-card"><small>${escapeHtml(title)}</small><strong style="color:${color}">${escapeHtml(value)}</strong><span>${escapeHtml(desc)}</span></div>`;
+}
+
+function getBMICategory(bmi) {
+  if (bmi < 18.5) return "Поднормено";
+  if (bmi < 25) return "Нормално";
+  if (bmi < 30) return "Наднормено";
+  return "Затлъстяване";
+}
+
+function getBMIColor(bmi) {
+  if (bmi < 18.5) return "var(--blue)";
+  if (bmi < 25) return "var(--green)";
+  if (bmi < 30) return "var(--yellow)";
+  return "var(--red)";
 }
 
 function bindCamera() {
@@ -201,6 +331,7 @@ function bindCamera() {
     state.selectedImageDataUrl = await fileToDataUrl(file);
     $("preview").src = state.selectedImageDataUrl;
     $("preview").style.display = "block";
+    $("photoPlaceholder").style.display = "none";
     $("analysisPanel").classList.add("hidden");
   });
 
@@ -212,6 +343,7 @@ function bindCamera() {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       title,
+      mealType: $("mealType").value,
       image: state.selectedImageDataUrl,
       analysis: state.lastAnalysis
     });
@@ -261,6 +393,7 @@ async function analyzeFood() {
     ], true);
 
     state.lastAnalysis = parseGroqJson(result);
+    renderAnalysisSummary(state.lastAnalysis);
     $("analysisJson").textContent = JSON.stringify(state.lastAnalysis, null, 2);
     $("analysisPanel").classList.remove("hidden");
     $("analysisStatus").textContent = "Готово.";
@@ -269,6 +402,21 @@ async function analyzeFood() {
   } finally {
     $("analyzeButton").disabled = false;
   }
+}
+
+function renderAnalysisSummary(analysis) {
+  $("analysisCalories").textContent = `${Math.round(analysis.totalCalories || 0)} kcal`;
+  $("analysisSummary").innerHTML = `
+    <h3>${escapeHtml(analysis.rating || "Анализ")}</h3>
+    <p class="hint">${escapeHtml(analysis.reason || "")}</p>
+    <div class="analysis-pills">
+      <div class="pill"><span>Протеини</span><strong>${Math.round(analysis.protein || 0)}g</strong></div>
+      <div class="pill"><span>Въгл.</span><strong>${Math.round(analysis.carbs || 0)}g</strong></div>
+      <div class="pill"><span>Мазнини</span><strong>${Math.round(analysis.fat || 0)}g</strong></div>
+      <div class="pill"><span>Фибри</span><strong>${Math.round(analysis.fiber || 0)}g</strong></div>
+    </div>
+    ${analysis.recommendation ? `<div class="plan-item"><span>${escapeHtml(analysis.recommendation)}</span></div>` : ""}
+  `;
 }
 
 async function callGroq(messages, jsonMode = false) {
@@ -314,19 +462,33 @@ function parseGroqJson(data) {
 
 function renderHistory() {
   if (!state.meals.length) {
-    $("mealHistory").innerHTML = `<p class="muted">Все още няма запазени хранения.</p>`;
+    $("mealHistory").innerHTML = `<div class="empty-copy">Все още няма запазени хранения.</div>`;
     return;
   }
-  $("mealHistory").innerHTML = state.meals.map((meal) => `
-    <div class="meal-card">
+  $("mealHistory").innerHTML = state.meals.map((meal) => mealRowHtml(meal, true)).join("");
+}
+
+function mealRowHtml(meal, includeDate = false) {
+  const time = includeDate ? new Date(meal.date).toLocaleString("bg-BG") : new Date(meal.date).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" });
+  const mealType = mealTypeLabel(meal.mealType);
+  return `
+    <div class="meal-row">
       <div>
         <strong>${escapeHtml(meal.title)}</strong>
-        <p class="muted">${new Date(meal.date).toLocaleString("bg-BG")}</p>
-        <p>${escapeHtml(meal.analysis.rating || "")}</p>
+        <p>${escapeHtml(time)} • ${escapeHtml(mealType)} • ${escapeHtml(meal.analysis.rating || "")}</p>
       </div>
-      <strong>${Math.round(meal.analysis.totalCalories || 0)} kcal</strong>
+      <strong>+${Math.round(meal.analysis.totalCalories || 0)} kcal</strong>
     </div>
-  `).join("");
+  `;
+}
+
+function mealTypeLabel(type) {
+  return {
+    breakfast: "Закуска",
+    lunch: "Обяд",
+    dinner: "Вечеря",
+    snack: "Снак"
+  }[type] || "Хранене";
 }
 
 function bindProgress() {
@@ -336,6 +498,8 @@ function bindProgress() {
     if (!value) return;
     state.weights.push({ id: crypto.randomUUID(), date: new Date().toISOString(), weight: value });
     save("nutriai.weights", state.weights);
+    $("weightEntry").value = "";
+    renderDashboard();
     drawWeightChart();
   });
 }
@@ -373,7 +537,7 @@ function drawWeightChart() {
     return { x, y, value: item.weight };
   });
 
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--orange");
   ctx.lineWidth = 4;
   ctx.beginPath();
   points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
@@ -382,7 +546,7 @@ function drawWeightChart() {
   points.forEach((point) => {
     ctx.beginPath();
     ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--orange");
     ctx.fill();
   });
 }
