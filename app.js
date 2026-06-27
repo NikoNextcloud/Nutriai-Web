@@ -184,6 +184,7 @@ function bindNavigation() {
       const section = $(`view-${view}`);
       section.classList.add("active");
       $("screenTitle").textContent = section.dataset.title || "NutriAI";
+      updateCurrentDate(view === "dashboard");
       if (view === "progress") drawWeightChart();
     });
   });
@@ -439,6 +440,7 @@ function bindPlanActions() {
 
 function renderDashboard() {
   resetWaterIfNeeded();
+  updateCurrentDate($("view-dashboard").classList.contains("active"));
   const targets = calculateTargets(state.profile);
   const consumed = consumedToday();
   const totals = macroTotalsToday();
@@ -746,6 +748,7 @@ function bindCamera() {
 
   $("analyzeButton").addEventListener("click", analyzeFood);
   $("saveMeal").addEventListener("click", saveAnalyzedMeal);
+  $("clearAnalysis").addEventListener("click", clearCameraAnalysis);
   $("foodScanOverlay").addEventListener("click", handleDetectedFoodAdd);
 }
 
@@ -861,6 +864,7 @@ async function analyzeFood() {
   }
 
   $("analysisStatus").textContent = "Анализирам снимката...";
+  $("clearAnalysis").classList.remove("hidden");
   $("analyzeButton").disabled = true;
 
   const remaining = state.profile.dailyLimit - consumedToday();
@@ -1880,4 +1884,40 @@ async function handleDetectedFoodAdd(event) {
     button.disabled = false;
     $("analysisStatus").textContent = "Продуктът не беше запазен.";
   }
+}
+
+
+function clearCameraAnalysis() {
+  state.selectedImageDataUrl = "";
+  state.lastAnalysis = null;
+  $("foodImage").value = "";
+  $("preview").removeAttribute("src");
+  $("preview").style.display = "none";
+  $("photoPlaceholder").style.display = "";
+  $("analysisPanel").classList.add("hidden");
+  $("foodScanOverlay").classList.add("hidden");
+  $("foodScanOverlay").innerHTML = "";
+  $("photoFrame").classList.remove("has-scan-results");
+  $("analysisStatus").textContent = "";
+  $("clearAnalysis").classList.add("hidden");
+  $("analyzeButton").disabled = false;
+  const mascot = $("calorieMascot");
+  if (mascot) {
+    mascot.classList.remove("show");
+    mascot.setAttribute("aria-hidden", "true");
+  }
+  clearTimeout(window.nutriMascotTimer);
+}
+
+
+function updateCurrentDate(show = true) {
+  const element = $("currentDate");
+  if (!element) return;
+  element.textContent = new Intl.DateTimeFormat("bg-BG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(new Date());
+  element.classList.toggle("hidden", !show);
 }

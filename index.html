@@ -65,6 +65,7 @@
       <div>
         <p class="eyebrow">Вашият AI диетолог</p>
         <h1 id="screenTitle">Днес</h1>
+        <p id="currentDate" class="current-date"></p>
       </div>
       <button class="round-button" id="themeToggle" title="Смени тема" aria-label="Смени тема">◐</button>
     </header>
@@ -118,21 +119,27 @@
           </div>
         </article>
 
-        <article class="ios-card">
-          <div class="card-title-row">
+        <details class="ios-card dashboard-collapsible" open>
+          <summary class="card-title-row collapsible-summary">
             <h2><span class="title-icon">🍽</span> Днешни хранения</h2>
-            <button class="text-button" data-jump="camera">＋ Добави</button>
+            <span class="collapsible-chevron">⌄</span>
+          </summary>
+          <div class="collapsible-content">
+            <button class="text-button collapsible-action" data-jump="camera">＋ Добави</button>
+            <div id="todayMeals" class="today-list"></div>
           </div>
-          <div id="todayMeals" class="today-list"></div>
-        </article>
+        </details>
 
-        <article class="ios-card">
-          <div class="card-title-row">
+        <details class="ios-card dashboard-collapsible" open>
+          <summary class="card-title-row collapsible-summary">
             <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
-            <button class="text-button" id="refreshPlan">↻ Нов</button>
+            <span class="collapsible-chevron">⌄</span>
+          </summary>
+          <div class="collapsible-content">
+            <button class="text-button collapsible-action" id="refreshPlan">↻ Нов</button>
+            <div id="aiMealPlan" class="plan-list"></div>
           </div>
-          <div id="aiMealPlan" class="plan-list"></div>
-        </article>
+        </details>
 
         <article class="ios-card">
           <div class="card-title-row">
@@ -163,7 +170,10 @@
           </div>
           <input id="mealType" type="hidden" value="lunch">
 
-          <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
+          <div class="camera-analysis-actions">
+            <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
+            <button id="clearAnalysis" class="secondary wide hidden" type="button">Изчисти</button>
+          </div>
           <p id="analysisStatus" class="status-line"></p>
         </article>
 

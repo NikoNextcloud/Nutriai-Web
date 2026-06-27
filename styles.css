@@ -1680,3 +1680,53 @@ input[type="checkbox"] {
     width: 96%;
   }
 }
+
+
+.camera-analysis-actions {
+  display: grid;
+  gap: 8px;
+}
+
+
+.dashboard-collapsible {
+  display: block;
+}
+
+.collapsible-summary {
+  min-height: 42px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-chevron {
+  color: var(--muted);
+  font-size: 1.35rem;
+  transition: transform 180ms ease;
+}
+
+.dashboard-collapsible[open] .collapsible-chevron {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  display: grid;
+  padding-top: 8px;
+}
+
+.collapsible-action {
+  justify-self: end;
+  margin-bottom: 5px;
+}
+
+
+.current-date {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
