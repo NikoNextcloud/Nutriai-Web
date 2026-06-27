@@ -1478,34 +1478,73 @@ async function scanBarcodeImage(event) {
 
   try {
     if ("BarcodeDetector" in window) {
-      const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
-      const bitmap = await createImageBitmap(file);
-      const codes = await detector.detect(bitmap);
-      bitmap.close();
-      rawValue = codes[0]?.rawValue || "";
-    }
-
-    if (!rawValue) {
-      status.textContent = "Обработвам снимката с допълнителния скенер...";
-      const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm");
-      const reader = new zxing.BrowserMultiFormatReader();
-      const imageUrl = URL.createObjectURL(file);
       try {
-        const result = await reader.decodeFromImageUrl(imageUrl);
-        rawValue = result?.getText?.() || result?.text || "";
-      } finally {
-        URL.revokeObjectURL(imageUrl);
-        reader.reset?.();
+        const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
+        const bitmap = await createImageBitmap(file);
+        const codes = await detector.detect(bitmap);
+        bitmap.close();
+        rawValue = codes[0]?.rawValue || "";
+      } catch {
+        rawValue = "";
       }
     }
 
-    if (!rawValue) throw new Error("Баркодът не беше разпознат. Снимай го отблизо, на светло и без отблясък.");
+    if (!rawValue) {
+      status.textContent = "Опитвам разширено разпознаване...";
+      try {
+        const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm");
+        const reader = new zxing.BrowserMultiFormatReader();
+        const imageUrl = URL.createObjectURL(file);
+        try {
+          const result = await reader.decodeFromImageUrl(imageUrl);
+          rawValue = result?.getText?.() || result?.text || "";
+        } finally {
+          URL.revokeObjectURL(imageUrl);
+          reader.reset?.();
+        }
+      } catch {
+        rawValue = "";
+      }
+    }
+
+    if (!rawValue) {
+      status.textContent = "Проверявам с EAN/UPC скенер...";
+      rawValue = await decodeBarcodeWithQuagga(file);
+    }
+
+    if (!rawValue) throw new Error("Баркодът не се вижда достатъчно ясно. Снимай само баркода отблизо, хоризонтално, на светло и без отблясък.");
+
     $("barcodeValue").value = rawValue;
+    status.textContent = "Баркодът е разпознат: " + rawValue;
     await lookupBarcodeProduct(rawValue);
   } catch (error) {
-    status.textContent = error.message || "Баркодът не беше разпознат. Можеш да въведеш цифрите ръчно.";
+    status.textContent = error.message || "Баркодът не беше разпознат. Въведи цифрите под него ръчно.";
   } finally {
     event.target.value = "";
+  }
+}
+
+async function decodeBarcodeWithQuagga(file) {
+  try {
+    const module = await import("https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/+esm");
+    const Quagga = module.default || module;
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      return await new Promise((resolve) => {
+        Quagga.decodeSingle({
+          src: imageUrl,
+          numOfWorkers: 0,
+          locate: true,
+          locator: { patchSize: "medium", halfSample: true },
+          inputStream: { size: 1280 },
+          decoder: { readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader", "code_128_reader"] }
+        }, (result) => resolve(result?.codeResult?.code || ""));
+      });
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  } catch {
+    return "";
   }
 }
 
