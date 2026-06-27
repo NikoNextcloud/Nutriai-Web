@@ -183,18 +183,22 @@ h2 {
   fill: var(--card-2);
 }
 
-.apple-fill {
-  fill: var(--green);
-  transition: y 500ms ease, height 500ms ease, fill 350ms ease;
+.apple-outline,
+.apple-progress-line {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .apple-outline {
-  fill: none;
+  stroke: var(--card-2);
+}
+
+.apple-progress-line {
   stroke: var(--green);
-  stroke-width: 8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: stroke 350ms ease;
+  stroke-dasharray: 0 100;
+  transition: stroke-dasharray 550ms ease, stroke 350ms ease;
 }
 
 .apple-stem {
