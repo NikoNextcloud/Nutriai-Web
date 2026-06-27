@@ -220,10 +220,8 @@ h2 {
   place-items: center;
   align-content: center;
   padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(5px);
+  border: 0;
+  background: transparent;
   text-align: center;
 }
 
