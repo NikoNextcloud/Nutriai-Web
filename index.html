@@ -157,6 +157,13 @@
 
         <details class="ios-card manual-meal-card">
           <summary class="manual-meal-summary"><span><span class="title-icon">＋</span> Ръчно добавяне</span><span class="manual-chevron">⌄</span></summary>
+          <div class="favorite-products" id="favoriteProducts"></div>
+          <div class="barcode-tools">
+            <input id="barcodeValue" type="text" inputmode="numeric" placeholder="Баркод на продукт">
+            <button id="lookupBarcode" class="secondary" type="button">Намери</button>
+            <label class="secondary barcode-camera" title="Снимай баркод">▣<input id="barcodeImage" type="file" accept="image/*" capture="environment"></label>
+          </div>
+          <p id="barcodeStatus" class="status-line"></p>
           <form id="manualMealForm" class="manual-meal-form">
             <label class="manual-name">Продукт или храна
               <input id="manualName" type="text" maxlength="80" placeholder="Напр. протеин на прах" required>
@@ -164,6 +171,7 @@
             <label>Количество, г
               <input id="manualGrams" type="number" min="0" max="5000" step="0.1" placeholder="30">
             </label>
+            <label class="manual-per100"><input id="manualPer100" type="checkbox"> Стойностите са за 100 г</label>
             <label>Калории, kcal
               <input id="manualCalories" type="number" min="0" max="10000" step="1" placeholder="120" required>
             </label>
@@ -179,6 +187,8 @@
             <label>Фибри, г
               <input id="manualFiber" type="number" min="0" max="1000" step="0.1" placeholder="0">
             </label>
+            <div class="manual-preview" id="manualNutritionPreview">Въведи количество и стойности.</div>
+            <label class="manual-favorite"><input id="saveAsFavorite" type="checkbox"> Запази като любим продукт</label>
             <button class="primary wide manual-submit" type="submit">Добави към дневника</button>
           </form>
           <p id="manualMealStatus" class="status-line" aria-live="polite"></p>
@@ -190,6 +200,18 @@
             <strong id="analysisCalories"></strong>
           </div>
           <div id="analysisSummary"></div>
+          <details class="analysis-correction">
+            <summary>Коригирай резултата</summary>
+            <div class="correction-grid">
+              <label>Име<input id="correctedName" type="text"></label>
+              <label>Калории<input id="correctedCalories" type="number" min="0"></label>
+              <label>Протеин, г<input id="correctedProtein" type="number" min="0" step="0.1"></label>
+              <label>Въглехидрати, г<input id="correctedCarbs" type="number" min="0" step="0.1"></label>
+              <label>Мазнини, г<input id="correctedFat" type="number" min="0" step="0.1"></label>
+              <label>Фибри, г<input id="correctedFiber" type="number" min="0" step="0.1"></label>
+              <button id="applyAnalysisCorrection" class="secondary wide" type="button">Приложи корекцията</button>
+            </div>
+          </details>
           <button id="saveMeal" class="primary wide">Добави към дневника</button>
         </article>
       </section>
@@ -197,6 +219,16 @@
       <section class="view" id="view-history" data-title="История">
         <article class="ios-card">
           <h2><span class="title-icon">🧾</span> История на храненията</h2>
+          <div class="history-toolbar">
+            <label>Ден<input id="historyDate" type="date"></label>
+            <button id="showAllHistory" class="secondary" type="button">Всички</button>
+          </div>
+          <div id="weeklyStats" class="weekly-stats"></div>
+          <div class="archive-actions">
+            <button id="exportData" class="secondary" type="button">Експорт</button>
+            <label class="secondary import-label">Импорт<input id="importData" type="file" accept="application/json"></label>
+          </div>
+          <p id="archiveStatus" class="status-line"></p>
           <div id="mealHistory" class="history-list"></div>
         </article>
       </section>
@@ -227,8 +259,34 @@
             <button class="send-button" type="submit" aria-label="Изпрати">➤</button>
           </form>
         </article>
+              <article class="ios-card reminder-card">
+          <h2><span class="title-icon">◷</span> Напомняния</h2>
+          <div class="reminder-list">
+            <label><input id="reminderWater" type="checkbox"> Вода през <select id="waterInterval"><option value="60">1 час</option><option value="120">2 часа</option><option value="180">3 часа</option></select></label>
+            <label><input id="reminderMeals" type="checkbox"> Хранене <input id="mealReminderTime" type="time"></label>
+            <label><input id="reminderWeight" type="checkbox"> Тегло <input id="weightReminderTime" type="time"></label>
+            <label><input id="reminderProtein" type="checkbox"> Проверка на протеин <input id="proteinReminderTime" type="time"></label>
+          </div>
+          <button id="saveReminders" class="primary wide" type="button">Запази напомнянията</button>
+          <p id="reminderStatus" class="status-line"></p>
+        </article>
       </section>
     </main>
+
+    <dialog id="mealEditor" class="meal-editor">
+      <form id="mealEditForm">
+        <h2>Редактиране на хранене</h2>
+        <input id="editMealId" type="hidden">
+        <label>Име<input id="editMealName" type="text" required></label>
+        <label>Дата и час<input id="editMealDate" type="datetime-local" required></label>
+        <label>Калории<input id="editMealCalories" type="number" min="0" required></label>
+        <label>Протеин, г<input id="editMealProtein" type="number" min="0" step="0.1"></label>
+        <label>Въглехидрати, г<input id="editMealCarbs" type="number" min="0" step="0.1"></label>
+        <label>Мазнини, г<input id="editMealFat" type="number" min="0" step="0.1"></label>
+        <label>Фибри, г<input id="editMealFiber" type="number" min="0" step="0.1"></label>
+        <div class="split-actions"><button id="cancelMealEdit" class="secondary" type="button">Отказ</button><button class="primary" type="submit">Запази</button></div>
+      </form>
+    </dialog>
 
     <nav class="tabbar" aria-label="Основна навигация">
       <button class="tab active" data-view="dashboard"><span>🏠</span>Днес</button>

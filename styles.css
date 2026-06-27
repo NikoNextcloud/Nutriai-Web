@@ -970,3 +970,267 @@ canvas {
 .setup-estimate-note {
   margin: 10px 2px 0;
 }
+
+
+input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--orange);
+}
+
+.favorite-products {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  margin: 12px 0 4px;
+  padding-bottom: 4px;
+}
+
+.favorite-products > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.favorite-chip {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card-2);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.barcode-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.barcode-tools .secondary,
+.barcode-camera {
+  min-height: 44px;
+}
+
+.barcode-camera {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.barcode-camera input,
+.import-label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.manual-per100,
+.manual-favorite {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.manual-preview {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--card-2);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.analysis-correction {
+  margin: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.analysis-correction summary {
+  padding: 12px 0;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.correction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+.correction-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.history-toolbar,
+.archive-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.weekly-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.weekly-stats > div {
+  min-width: 0;
+  padding: 10px 6px;
+  border-radius: 8px;
+  background: var(--card-2);
+  text-align: center;
+}
+
+.weekly-stats strong,
+.weekly-stats span {
+  display: block;
+}
+
+.weekly-stats strong {
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.weekly-stats span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.import-label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.meal-row-side {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.meal-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.icon-action {
+  width: 30px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.icon-action.danger {
+  color: var(--red);
+}
+
+.meal-editor {
+  width: min(92vw, 460px);
+  max-height: 88vh;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  padding: 18px;
+}
+
+.meal-editor::backdrop {
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.meal-editor form {
+  display: grid;
+  gap: 10px;
+}
+
+.meal-editor h2 {
+  margin: 0 0 4px;
+}
+
+.reminder-card {
+  margin-top: 14px;
+}
+
+.reminder-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.reminder-list label {
+  display: grid;
+  grid-template-columns: auto 1fr minmax(96px, auto);
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 8px;
+  background: var(--card-2);
+  color: var(--text);
+}
+
+.reminder-list input[type="time"],
+.reminder-list select {
+  min-height: 38px;
+  padding: 6px 8px;
+}
+
+@media (max-width: 430px) {
+  .correction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .correction-grid .wide,
+  .manual-per100,
+  .manual-favorite,
+  .manual-preview {
+    grid-column: auto;
+  }
+
+  .meal-row {
+    align-items: start;
+  }
+
+  .meal-row-side {
+    grid-column: 2;
+  }
+
+  .weekly-stats {
+    gap: 5px;
+  }
+
+  .reminder-list label {
+    grid-template-columns: auto 1fr;
+  }
+
+  .reminder-list label input[type="time"],
+  .reminder-list label select {
+    grid-column: 1 / -1;
+  }
+}
