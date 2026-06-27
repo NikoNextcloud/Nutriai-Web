@@ -72,13 +72,23 @@
     <main class="screen-stack">
       <section class="view active" id="view-dashboard" data-title="Днес">
         <article class="calorie-card">
-          <div class="ring-wrap">
-            <div class="ring" id="calorieRing">
-              <div class="ring-core">
-                <small id="recommendedCalories" class="recommended-calories"></small>
-                <strong id="remainingCalories">0</strong>
-                <span>дневен<br>лимит</span>
-              </div>
+          <div class="apple-meter" id="calorieRing">
+            <svg class="apple-progress-svg" viewBox="0 0 220 210" aria-hidden="true">
+              <defs>
+                <clipPath id="appleFillClip">
+                  <path d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+                </clipPath>
+              </defs>
+              <path class="apple-background" d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+              <rect id="appleFill" class="apple-fill" x="0" y="210" width="220" height="0" clip-path="url(#appleFillClip)"></rect>
+              <path id="appleOutline" class="apple-outline" d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+              <path class="apple-stem" d="M109 55 C104 38 108 25 119 15"></path>
+              <path class="apple-leaf" d="M119 19 C139 8 154 14 160 29 C142 34 128 31 119 19 Z"></path>
+            </svg>
+            <div class="apple-core">
+              <small id="recommendedCalories" class="recommended-calories"></small>
+              <strong id="remainingCalories">0</strong>
+              <span>дневен<br>лимит</span>
             </div>
           </div>
           <div class="calorie-stats">

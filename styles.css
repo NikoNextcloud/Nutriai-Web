@@ -163,31 +163,69 @@ h2 {
   place-items: center;
 }
 
-.ring {
-  width: 176px;
-  height: 176px;
-  border-radius: 999px;
+.apple-meter {
+  position: relative;
   display: grid;
+  width: 210px;
+  aspect-ratio: 220 / 210;
   place-items: center;
-  background: conic-gradient(var(--orange) 0deg, rgba(160, 160, 170, 0.18) 0deg);
-  transform: rotate(-90deg);
 }
 
-.ring-core {
-  width: 136px;
-  height: 136px;
+.apple-progress-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.apple-background {
+  fill: var(--card-2);
+}
+
+.apple-fill {
+  fill: var(--green);
+  transition: y 500ms ease, height 500ms ease, fill 350ms ease;
+}
+
+.apple-outline {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 350ms ease;
+}
+
+.apple-stem {
+  fill: none;
+  stroke: #795548;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.apple-leaf {
+  fill: var(--green);
+}
+
+.apple-core {
+  position: relative;
+  z-index: 2;
   display: grid;
+  min-width: 112px;
   place-items: center;
   align-content: center;
-  border-radius: 999px;
-  background: var(--card);
-  transform: rotate(90deg);
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(5px);
   text-align: center;
 }
 
-.ring-core strong {
+.apple-core strong {
   display: block;
-  font-size: 2.35rem;
+  font-size: 2.2rem;
   line-height: 1;
 }
 
@@ -198,10 +236,14 @@ h2 {
   line-height: 1;
 }
 
-.ring-core span {
+.apple-core span {
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1.16;
+}
+
+.apple-meter.limit-reached .apple-core strong {
+  color: var(--red);
 }
 
 .calorie-stats {

@@ -451,8 +451,14 @@ function renderDashboard() {
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
   $("targetCalories").textContent = `${Math.abs(remaining)}`;
   $("targetCaloriesLabel").textContent = remaining < 0 ? "Превишени" : "Оставащи";
-  const ringColor = consumed >= limit ? "var(--red)" : "var(--orange)";
-  $("calorieRing").style.background = `conic-gradient(${ringColor} ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
+  const appleFill = $("appleFill");
+  const appleOutline = $("appleOutline");
+  const appleFillHeight = Math.round(percent * 210);
+  const appleColor = percent >= 1 ? "var(--red)" : percent >= 0.8 ? "var(--orange)" : percent >= 0.5 ? "var(--yellow)" : "var(--green)";
+  appleFill.setAttribute("y", String(210 - appleFillHeight));
+  appleFill.setAttribute("height", String(appleFillHeight));
+  appleFill.style.fill = appleColor;
+  appleOutline.style.stroke = appleColor;
   $("calorieRing").classList.toggle("limit-reached", consumed >= limit);
 
   $("macroBars").innerHTML = [
