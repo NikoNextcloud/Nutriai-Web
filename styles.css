@@ -1234,3 +1234,8 @@ input[type="checkbox"] {
     grid-column: 1 / -1;
   }
 }
+
+
+.clear-manual-food {
+  margin-top: 8px;
+}

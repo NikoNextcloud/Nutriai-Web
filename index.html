@@ -89,7 +89,7 @@
             <i></i>
             <div>
               <strong id="targetCalories">0</strong>
-              <span>Оставащи</span>
+              <span id="targetCaloriesLabel">Оставащи</span>
             </div>
           </div>
         </article>
@@ -164,6 +164,7 @@
             <label class="secondary barcode-camera" title="Снимай баркод">▣<input id="barcodeImage" type="file" accept="image/*" capture="environment"></label>
           </div>
           <p id="barcodeStatus" class="status-line"></p>
+          <button id="clearManualFood" class="secondary wide clear-manual-food" type="button">Изчисти данните</button>
           <form id="manualMealForm" class="manual-meal-form">
             <label class="manual-name">Продукт или храна
               <input id="manualName" type="text" maxlength="80" placeholder="Напр. протеин на прах" required>

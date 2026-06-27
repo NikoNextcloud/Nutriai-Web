@@ -441,7 +441,8 @@ function renderDashboard() {
   $("recommendedCalories").textContent = `Преп. ${recommended} kcal`;
   $("remainingCalories").textContent = `${limit}`;
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
-  $("targetCalories").textContent = `${Math.max(remaining, 0)}`;
+  $("targetCalories").textContent = `${Math.abs(remaining)}`;
+  $("targetCaloriesLabel").textContent = remaining < 0 ? "Превишени" : "Оставащи";
   const ringColor = consumed >= limit ? "var(--red)" : "var(--orange)";
   $("calorieRing").style.background = `conic-gradient(${ringColor} ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
   $("calorieRing").classList.toggle("limit-reached", consumed >= limit);
@@ -722,6 +723,7 @@ function bindCamera() {
     const file = event.target.files?.[0];
     if (!file) return;
     state.selectedImageDataUrl = await fileToDataUrl(file);
+    selectMealTypeByTime(new Date());
     $("preview").src = state.selectedImageDataUrl;
     $("preview").style.display = "block";
     $("photoPlaceholder").style.display = "none";
@@ -1249,6 +1251,7 @@ function bindEnhancedFeatures() {
 
   $("favoriteProducts")?.addEventListener("click", loadFavoriteFromButton);
   $("lookupBarcode")?.addEventListener("click", () => lookupBarcodeProduct($("barcodeValue").value.trim()));
+  $("clearManualFood")?.addEventListener("click", clearManualFoodData);
   $("barcodeImage")?.addEventListener("change", scanBarcodeImage);
   $("applyAnalysisCorrection")?.addEventListener("click", applyAnalysisCorrection);
   $("exportData")?.addEventListener("click", exportNutriData);
@@ -1605,4 +1608,23 @@ async function checkReminders() {
       icon: "icons/icon-192.png"
     });
   }
+}
+
+
+function clearManualFoodData() {
+  $("manualMealForm")?.reset();
+  $("barcodeValue").value = "";
+  $("barcodeImage").value = "";
+  $("barcodeStatus").textContent = "Данните са изчистени.";
+  $("manualMealStatus").textContent = "";
+  updateManualNutritionPreview();
+}
+
+function selectMealTypeByTime(date = new Date()) {
+  const hour = date.getHours();
+  const type = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 22 ? "dinner" : "snack";
+  $("mealType").value = type;
+  document.querySelectorAll("[data-meal]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.meal === type);
+  });
 }
