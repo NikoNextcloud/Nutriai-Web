@@ -50,7 +50,12 @@
         <button class="primary setup-button" type="submit">✨ Създай хранителен план</button>
       </form>
 
+      <div class="setup-estimate-head">
+        <strong>Твоите ориентировъчни стойности</strong>
+        <span id="setupEstimateSummary"></span>
+      </div>
       <div class="metrics" id="metrics"></div>
+      <p class="setup-estimate-note">Изчисленията са по формулата Mifflin–St Jeor и стандартен коефициент за активност. Те са ориентировъчни, а не медицинска препоръка.</p>
       <div id="nutritionPlan" class="plan-list"></div>
     </div>
   </section>
@@ -148,6 +153,36 @@
           <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
           <p id="analysisStatus" class="status-line"></p>
         </article>
+
+
+        <details class="ios-card manual-meal-card">
+          <summary class="manual-meal-summary"><span><span class="title-icon">＋</span> Ръчно добавяне</span><span class="manual-chevron">⌄</span></summary>
+          <form id="manualMealForm" class="manual-meal-form">
+            <label class="manual-name">Продукт или храна
+              <input id="manualName" type="text" maxlength="80" placeholder="Напр. протеин на прах" required>
+            </label>
+            <label>Количество, г
+              <input id="manualGrams" type="number" min="0" max="5000" step="0.1" placeholder="30">
+            </label>
+            <label>Калории, kcal
+              <input id="manualCalories" type="number" min="0" max="10000" step="1" placeholder="120" required>
+            </label>
+            <label>Протеин, г
+              <input id="manualProtein" type="number" min="0" max="1000" step="0.1" placeholder="24">
+            </label>
+            <label>Въглехидрати, г
+              <input id="manualCarbs" type="number" min="0" max="1000" step="0.1" placeholder="3">
+            </label>
+            <label>Мазнини, г
+              <input id="manualFat" type="number" min="0" max="1000" step="0.1" placeholder="2">
+            </label>
+            <label>Фибри, г
+              <input id="manualFiber" type="number" min="0" max="1000" step="0.1" placeholder="0">
+            </label>
+            <button class="primary wide manual-submit" type="submit">Добави към дневника</button>
+          </form>
+          <p id="manualMealStatus" class="status-line" aria-live="polite"></p>
+        </details>
 
         <article class="ios-card hidden" id="analysisPanel">
           <div class="card-title-row">

@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProfile();
   bindCalorieRecommendation();
   bindCamera();
+  bindManualMeal();
   bindHydration();
   bindSegments();
   bindProgress();
@@ -304,6 +305,49 @@ function updateRecommendedDailyLimit(keepUserValue = false) {
   state.profile.recommendedCalories = targets.recommendedCalories;
   if (!keepUserValue) {
     $("dailyLimit").value = targets.recommendedCalories;
+  }
+  renderSetupPreview(profile, targets);
+}
+
+function renderSetupPreview(profile, targets) {
+  const metricsContainer = $("metrics");
+  if (!metricsContainer) return;
+
+  const weightDifference = Number(profile.targetWeight) - Number(profile.weight);
+  const weeklyChange = profile.goal === "Отслабване" ? -0.45 : profile.goal === "Покачване" ? 0.3 : 0;
+  const weeks = weeklyChange && weightDifference
+    ? Math.max(1, Math.ceil(Math.abs(weightDifference / weeklyChange)))
+    : 0;
+  const directionMatches = (profile.goal === "Отслабване" && weightDifference < 0)
+    || (profile.goal === "Покачване" && weightDifference > 0)
+    || profile.goal === "Поддържане";
+
+  const liveMetrics = [
+    ["BMI", targets.bmi],
+    ["Базов метаболизъм", `${targets.bmr} kcal`],
+    ["Дневен разход", `${targets.tdee} kcal`],
+    ["Препоръчителен прием", `${targets.recommendedCalories} kcal`],
+    ["Протеин", `${targets.protein} г`],
+    ["Мазнини", `${targets.fat} г`],
+    ["Въглехидрати", `${targets.carbs} г`],
+    ["Фибри", `${targets.fiber} г`],
+    ["Вода", `${targets.water} мл`]
+  ];
+
+  if (weeks && directionMatches) {
+    liveMetrics.push(["Ориентировъчен срок", `${weeks} седмици`]);
+  }
+
+  metricsContainer.innerHTML = liveMetrics.map(([label, value]) => metricHtml(label, value)).join("");
+  const summary = $("setupEstimateSummary");
+  if (summary) {
+    const activity = profile.activityLabel || "избраната активност";
+    const pace = profile.goal === "Отслабване"
+      ? "около 0.45 кг/седмица"
+      : profile.goal === "Покачване"
+        ? "около 0.30 кг/седмица"
+        : "стабилно тегло";
+    summary.textContent = `${activity} активност · ${profile.goal} · ${pace}`;
   }
 }
 function updateAppVisibility() {
@@ -678,6 +722,69 @@ function bindCamera() {
   $("saveMeal").addEventListener("click", saveAnalyzedMeal);
 }
 
+
+function bindManualMeal() {
+  $("manualMealForm")?.addEventListener("submit", saveManualMeal);
+}
+
+async function saveManualMeal(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  const name = $("manualName").value.trim();
+  const grams = numberFromField("manualGrams");
+  const calories = numberFromField("manualCalories");
+
+  if (!name || calories === null) {
+    $("manualMealStatus").textContent = "Въведи име и калории.";
+    return;
+  }
+
+  const meal = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title: name,
+    mealType: $("mealType").value,
+    image: "",
+    quantityGrams: grams || 0,
+    analysis: {
+      totalCalories: calories,
+      protein: numberFromField("manualProtein") || 0,
+      carbs: numberFromField("manualCarbs") || 0,
+      fat: numberFromField("manualFat") || 0,
+      fiber: numberFromField("manualFiber") || 0,
+      rating: grams ? grams + " г · ръчно добавено" : "Ръчно добавено",
+      foods: [{ name, grams: grams || 0, calories }],
+      reason: "Хранителните стойности са въведени ръчно."
+    }
+  };
+
+  button.disabled = true;
+  $("manualMealStatus").textContent = "Запазвам в дневника...";
+  state.meals.unshift(meal);
+
+  try {
+    await save("nutriai.meals", state.meals);
+    renderAll();
+    form.reset();
+    $("manualMealStatus").textContent = name + " е добавен към дневника.";
+    document.querySelector('.tab[data-view="dashboard"]')?.click();
+  } catch (error) {
+    state.meals = state.meals.filter((item) => item.id !== meal.id);
+    $("manualMealStatus").textContent = "Не успях да запазя храната. Опитай отново.";
+    console.error(error);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function numberFromField(id) {
+  const value = $(id).value.trim();
+  if (value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
 async function saveAnalyzedMeal() {
   if (!state.lastAnalysis) {
     $("analysisStatus").textContent = "Първо анализирай снимката.";
@@ -732,9 +839,10 @@ async function analyzeFood() {
 Получаваш снимка на храна. Разпознай всички храни, оцени приблизителните грамове, калории, протеини, въглехидрати, мазнини и фибри.
 Профил: пол ${state.profile.gender}, възраст ${state.profile.age}, височина ${state.profile.height} см, тегло ${state.profile.weight} кг, желано тегло ${state.profile.targetWeight} кг, активност ${state.profile.activityLabel}, цел ${state.profile.goal}, дневен калориен лимит ${state.profile.dailyLimit}.
 Оставащи калории преди това хранене: ${Math.round(remaining)}.
+Оцени полезността на цялото хранене с healthScore от 0 до 100, където 0 е много вредно, а 100 е много полезно. В healthLevel върни точно една от стойностите: "Много вредна", "По-скоро вредна", "Умерена", "По-скоро полезна", "Много полезна". Вземи предвид степента на преработка, захарта, солта, наситените мазнини, протеина, фибрите, зеленчуците и размера на порцията.
 Не измисляй факти. Ако количеството не е сигурно, отбележи, че е ориентировъчна оценка.
 Върни само JSON със структура:
-{"foods":[{"name":"","estimatedGrams":0,"calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"confidenceNote":""}],"totalCalories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"rating":"","reason":"","remainingCalories":0,"recommendation":""}
+{"foods":[{"name":"","estimatedGrams":0,"calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"confidenceNote":""}],"totalCalories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"healthScore":0,"healthLevel":"","rating":"","reason":"","remainingCalories":0,"recommendation":""}
 Не използвай markdown, code block или обяснение извън JSON.`;
 
   try {
@@ -765,10 +873,20 @@ async function analyzeFood() {
 
 function renderAnalysisSummary(analysis) {
   $("analysisCalories").textContent = `${Math.round(analysis.totalCalories || 0)} kcal`;
+  const health = getHealthRating(analysis);
+  const panel = $("analysisPanel");
+  panel.classList.remove("health-very-bad", "health-bad", "health-medium", "health-good", "health-great");
+  panel.classList.add(health.className);
+
   const foodsHtml = analysis.foods?.length
     ? `<div class="food-list">${analysis.foods.map(foodItemHtml).join("")}</div>`
     : `<div class="empty-copy">Не са разпознати конкретни храни. Опитайте с по-ясна снимка.</div>`;
   $("analysisSummary").innerHTML = `
+    <div class="health-rating ${health.className}">
+      <span class="health-dot"></span>
+      <div><small>Оценка за полезност</small><strong>${escapeHtml(health.label)}</strong></div>
+      <b>${health.score}/100</b>
+    </div>
     <div class="analysis-headline">
       <h3>${escapeHtml(analysis.rating || "Анализ")}</h3>
       <p>${escapeHtml(analysis.reason || "Ориентировъчна оценка на храната от снимката.")}</p>
@@ -782,6 +900,23 @@ function renderAnalysisSummary(analysis) {
     ${foodsHtml}
     ${analysis.recommendation ? `<div class="recommendation-box"><strong>💡 Препоръка</strong><span>${escapeHtml(analysis.recommendation)}</span></div>` : ""}
   `;
+}
+
+function getHealthRating(analysis) {
+  let score = Number(analysis.healthScore);
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    const calories = Math.max(1, Number(analysis.totalCalories) || 1);
+    const protein = Number(analysis.protein) || 0;
+    const fiber = Number(analysis.fiber) || 0;
+    const fat = Number(analysis.fat) || 0;
+    score = 55 + Math.min(18, protein * 0.6) + Math.min(15, fiber * 2.5) - Math.min(20, fat * 0.5) - Math.max(0, calories - 700) / 35;
+  }
+  score = Math.round(Math.max(0, Math.min(100, score)));
+  if (score < 20) return { score, label: "Много вредна", className: "health-very-bad" };
+  if (score < 40) return { score, label: "По-скоро вредна", className: "health-bad" };
+  if (score < 60) return { score, label: "Умерена", className: "health-medium" };
+  if (score < 80) return { score, label: "По-скоро полезна", className: "health-good" };
+  return { score, label: "Много полезна", className: "health-great" };
 }
 
 function foodItemHtml(food) {
@@ -904,8 +1039,9 @@ function renderHistory() {
 function mealRowHtml(meal, includeDate = false) {
   const time = includeDate ? new Date(meal.date).toLocaleString("bg-BG") : new Date(meal.date).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" });
   const mealType = mealTypeLabel(meal.mealType);
+  const health = getHealthRating(meal.analysis || {});
   return `
-    <div class="meal-row">
+    <div class="meal-row meal-health ${health.className}">
       ${mealImageHtml(meal)}
       <div class="meal-row-main">
         <strong>${mealTypeIcon(meal.mealType)} ${escapeHtml(meal.title)}</strong>
