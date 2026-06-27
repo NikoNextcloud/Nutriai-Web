@@ -260,14 +260,17 @@
           </form>
         </article>
               <article class="ios-card reminder-card">
-          <h2><span class="title-icon">◷</span> Напомняния</h2>
-          <div class="reminder-list">
-            <label><input id="reminderWater" type="checkbox"> Вода през <select id="waterInterval"><option value="60">1 час</option><option value="120">2 часа</option><option value="180">3 часа</option></select></label>
-            <label><input id="reminderMeals" type="checkbox"> Хранене <input id="mealReminderTime" type="time"></label>
-            <label><input id="reminderWeight" type="checkbox"> Тегло <input id="weightReminderTime" type="time"></label>
-            <label><input id="reminderProtein" type="checkbox"> Проверка на протеин <input id="proteinReminderTime" type="time"></label>
+          <h2><span class="title-icon">💧</span> Напомняне за вода</h2>
+          <div class="reminder-list water-only-reminder">
+            <label><input id="reminderWater" type="checkbox"> Напомняй ми през
+              <select id="waterInterval">
+                <option value="60">1 час</option>
+                <option value="120">2 часа</option>
+                <option value="180">3 часа</option>
+              </select>
+            </label>
           </div>
-          <button id="saveReminders" class="primary wide" type="button">Запази напомнянията</button>
+          <button id="saveReminders" class="primary wide" type="button">Запази напомнянето</button>
           <p id="reminderStatus" class="status-line"></p>
         </article>
       </section>

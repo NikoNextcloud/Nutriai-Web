@@ -14,7 +14,7 @@ const state = {
   aiPlan: load("nutriai.aiPlan", null),
   aiPlanVariant: load("nutriai.aiPlanVariant", 0),
   favorites: load("nutriai.favorites", []),
-  reminders: load("nutriai.reminders", { water: false, meals: false, weight: false, protein: false, waterInterval: 120, mealTime: "12:30", weightTime: "08:00", proteinTime: "19:00" }),
+  reminders: load("nutriai.reminders", { water: false, waterInterval: 120, nextWaterAt: 0 }),
   historyDate: "",
   selectedImageDataUrl: "",
   lastAnalysis: null
@@ -442,7 +442,9 @@ function renderDashboard() {
   $("remainingCalories").textContent = `${limit}`;
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
   $("targetCalories").textContent = `${Math.max(remaining, 0)}`;
-  $("calorieRing").style.background = `conic-gradient(var(--orange) ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
+  const ringColor = consumed >= limit ? "var(--red)" : "var(--orange)";
+  $("calorieRing").style.background = `conic-gradient(${ringColor} ${percent * 360}deg, rgba(160, 160, 170, 0.18) 0deg)`;
+  $("calorieRing").classList.toggle("limit-reached", consumed >= limit);
 
   $("macroBars").innerHTML = [
     macroCard("💪", "Протеин", totals.protein, targets.protein, "var(--orange)"),
@@ -1444,21 +1446,39 @@ async function scanBarcodeImage(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   const status = $("barcodeStatus");
-  if (!("BarcodeDetector" in window)) {
-    status.textContent = "Този браузър не поддържа автоматично сканиране. Въведи цифрите от баркода.";
-    return;
-  }
   status.textContent = "Разчитам баркода...";
+  let rawValue = "";
+
   try {
-    const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
-    const bitmap = await createImageBitmap(file);
-    const codes = await detector.detect(bitmap);
-    bitmap.close();
-    if (!codes.length) throw new Error("Баркодът не беше разпознат.");
-    $("barcodeValue").value = codes[0].rawValue;
-    await lookupBarcodeProduct(codes[0].rawValue);
+    if ("BarcodeDetector" in window) {
+      const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
+      const bitmap = await createImageBitmap(file);
+      const codes = await detector.detect(bitmap);
+      bitmap.close();
+      rawValue = codes[0]?.rawValue || "";
+    }
+
+    if (!rawValue) {
+      status.textContent = "Обработвам снимката с допълнителния скенер...";
+      const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm");
+      const reader = new zxing.BrowserMultiFormatReader();
+      const imageUrl = URL.createObjectURL(file);
+      try {
+        const result = await reader.decodeFromImageUrl(imageUrl);
+        rawValue = result?.getText?.() || result?.text || "";
+      } finally {
+        URL.revokeObjectURL(imageUrl);
+        reader.reset?.();
+      }
+    }
+
+    if (!rawValue) throw new Error("Баркодът не беше разпознат. Снимай го отблизо, на светло и без отблясък.");
+    $("barcodeValue").value = rawValue;
+    await lookupBarcodeProduct(rawValue);
   } catch (error) {
-    status.textContent = error.message || "Баркодът не беше разпознат.";
+    status.textContent = error.message || "Баркодът не беше разпознат. Можеш да въведеш цифрите ръчно.";
+  } finally {
+    event.target.value = "";
   }
 }
 
@@ -1544,63 +1564,45 @@ async function importNutriData(event) {
 function hydrateReminderForm() {
   if (!$("reminderWater")) return;
   $("reminderWater").checked = Boolean(state.reminders.water);
-  $("reminderMeals").checked = Boolean(state.reminders.meals);
-  $("reminderWeight").checked = Boolean(state.reminders.weight);
-  $("reminderProtein").checked = Boolean(state.reminders.protein);
   $("waterInterval").value = String(state.reminders.waterInterval || 120);
-  $("mealReminderTime").value = state.reminders.mealTime || "12:30";
-  $("weightReminderTime").value = state.reminders.weightTime || "08:00";
-  $("proteinReminderTime").value = state.reminders.proteinTime || "19:00";
 }
 
 async function saveReminderSettings() {
-  const enabled = $("reminderWater").checked || $("reminderMeals").checked || $("reminderWeight").checked || $("reminderProtein").checked;
+  const enabled = $("reminderWater").checked;
   if (enabled && "Notification" in window && Notification.permission === "default") {
     await Notification.requestPermission();
   }
+  const interval = Number($("waterInterval").value) || 120;
   const notificationAllowed = "Notification" in window && Notification.permission === "granted";
   state.reminders = {
-    water: $("reminderWater").checked,
-    meals: $("reminderMeals").checked,
-    weight: $("reminderWeight").checked,
-    protein: $("reminderProtein").checked,
-    waterInterval: Number($("waterInterval").value) || 120,
-    mealTime: $("mealReminderTime").value || "12:30",
-    weightTime: $("weightReminderTime").value || "08:00",
-    proteinTime: $("proteinReminderTime").value || "19:00"
+    water: enabled,
+    waterInterval: interval,
+    nextWaterAt: enabled ? Date.now() + interval * 60000 : 0
   };
   await save("nutriai.reminders", state.reminders);
   $("reminderStatus").textContent = !enabled
-    ? "Напомнянията са изключени."
+    ? "Напомнянето за вода е изключено."
     : notificationAllowed
-      ? "Напомнянията са активни, докато приложението е отворено."
-      : "Настройките са запазени, но известията не са разрешени.";
+      ? `Ще ти напомня след ${interval / 60} ${interval === 60 ? "час" : "часа"}.`
+      : "Настройката е запазена, но трябва да разрешиш известията.";
 }
 
 function startReminderChecks() {
   if (window.nutriReminderTimer) clearInterval(window.nutriReminderTimer);
-  window.nutriReminderTimer = setInterval(checkReminders, 60000);
+  window.nutriReminderTimer = setInterval(checkReminders, 30000);
   checkReminders();
 }
 
-function checkReminders() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const now = new Date();
-  const minuteKey = `${localDateKey(now)}-${now.getHours()}:${now.getMinutes()}`;
-  if (window.nutriLastReminder === minuteKey) return;
-  const time = now.toTimeString().slice(0, 5);
-  const notify = (title, body) => {
-    window.nutriLastReminder = minuteKey;
-    new Notification(title, { body, icon: "icons/icon-192.png" });
-  };
-  if (state.reminders.meals && time === state.reminders.mealTime) notify("Време за хранене", "Запиши храненето си в NutriAI.");
-  else if (state.reminders.weight && time === state.reminders.weightTime) notify("Дневно тегло", "Добави актуалното си тегло.");
-  else if (state.reminders.protein && time === state.reminders.proteinTime) {
-    const protein = macroTotalsToday().protein;
-    notify("Проверка на протеина", `Днес имаш ${Math.round(protein)} г протеин.`);
-  } else if (state.reminders.water) {
-    const interval = Number(state.reminders.waterInterval) || 120;
-    const minutes = now.getHours() * 60 + now.getMinutes();
-    if (minutes > 0 && minutes % interval === 0) notify("Време за вода", "Добави чаша вода към дневния прием.");
+async function checkReminders() {
+  if (!state.reminders.water || !state.reminders.nextWaterAt) return;
+  if (Date.now() < state.reminders.nextWaterAt) return;
+  const interval = Number(state.reminders.waterInterval) || 120;
+  state.reminders.nextWaterAt = Date.now() + interval * 60000;
+  await save("nutriai.reminders", state.reminders);
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("Време за вода", {
+      body: "Изпий чаша вода и я добави към дневния прием.",
+      icon: "icons/icon-192.png"
+    });
   }
 }
