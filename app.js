@@ -673,7 +673,7 @@ function macroCard(icon, title, current, target, color) {
     <div class="macro-card">
       <span class="macro-icon">${escapeHtml(icon)}</span>
       <small>${escapeHtml(title)}</small>
-      <div class="macro-bar"><span style="height:${percent * 100}%;background:${color}"></span></div>
+      <div class="macro-bar"><span style="width:${percent * 100}%;background:${color}"></span></div>
       <strong>${Math.round(current || 0)} / ${Math.round(target || 0)}g</strong>
     </div>
   `;
