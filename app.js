@@ -888,6 +888,7 @@ async function analyzeFood() {
     populateAnalysisCorrection();
     $("analysisPanel").classList.remove("hidden");
     $("analysisStatus").textContent = "Готово.";
+    showCalorieMascot(state.lastAnalysis.totalCalories);
   } catch (error) {
     $("analysisStatus").textContent = error.message;
   } finally {
@@ -1797,4 +1798,20 @@ function renderFridgeRecipe() {
     '<h4>Приготвяне</h4><ol>' + steps.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ol>' +
     (recipe.tip ? '<div class="recommendation-box"><strong>Съвет</strong><span>' + escapeHtml(recipe.tip) + '</span></div>' : '');
   container.classList.remove("hidden");
+}
+
+
+function showCalorieMascot(calories) {
+  const mascot = $("calorieMascot");
+  if (!mascot) return;
+  clearTimeout(window.nutriMascotTimer);
+  $("mascotCalories").textContent = Math.round(Number(calories) || 0);
+  mascot.classList.remove("show");
+  mascot.setAttribute("aria-hidden", "false");
+  void mascot.offsetWidth;
+  mascot.classList.add("show");
+  window.nutriMascotTimer = setTimeout(() => {
+    mascot.classList.remove("show");
+    mascot.setAttribute("aria-hidden", "true");
+  }, 4000);
 }
