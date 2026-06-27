@@ -1272,6 +1272,8 @@ function bindEnhancedFeatures() {
 
   $("favoriteProducts")?.addEventListener("click", loadFavoriteFromButton);
   $("lookupBarcode")?.addEventListener("click", () => lookupBarcodeProduct($("barcodeValue").value.trim()));
+  $("startBarcodeScanner")?.addEventListener("click", startLiveBarcodeScanner);
+  $("closeBarcodeScanner")?.addEventListener("click", stopLiveBarcodeScanner);
   $("clearManualFood")?.addEventListener("click", clearManualFoodData);
   $("barcodeImage")?.addEventListener("change", scanBarcodeImage);
   $("applyAnalysisCorrection")?.addEventListener("click", applyAnalysisCorrection);
@@ -1677,7 +1679,7 @@ async function checkReminders() {
 function clearManualFoodData() {
   $("manualMealForm")?.reset();
   $("barcodeValue").value = "";
-  $("barcodeImage").value = "";
+  if ($("barcodeImage")) $("barcodeImage").value = "";
   $("barcodeStatus").textContent = "Данните са изчистени.";
   $("manualMealStatus").textContent = "";
   updateManualNutritionPreview();
@@ -1959,4 +1961,65 @@ function updateCurrentDate(show = true) {
     year: "numeric"
   }).format(new Date());
   element.classList.toggle("hidden", !show);
+}
+
+
+async function startLiveBarcodeScanner() {
+  const modal = $("barcodeScannerModal");
+  const video = $("barcodeVideo");
+  const status = $("liveBarcodeStatus");
+  modal.classList.remove("hidden");
+  status.textContent = "Разреши достъп до камерата и насочи баркода в рамката.";
+  window.nutriBarcodeDetected = false;
+
+  try {
+    const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.0/+esm");
+    const reader = new zxing.BrowserMultiFormatReader();
+    const controls = await reader.decodeFromConstraints({
+      audio: false,
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    }, video, async (result) => {
+      if (!result || window.nutriBarcodeDetected) return;
+      window.nutriBarcodeDetected = true;
+      const rawValue = result.getText?.() || result.text || "";
+      if (!rawValue) {
+        window.nutriBarcodeDetected = false;
+        return;
+      }
+      status.textContent = "Баркодът е разпознат: " + rawValue;
+      $("barcodeValue").value = rawValue;
+      stopLiveBarcodeScanner();
+      $("barcodeStatus").textContent = "Зареждам продукта...";
+      await lookupBarcodeProduct(rawValue);
+    });
+    window.nutriBarcodeControls = controls;
+  } catch (error) {
+    stopBarcodeMediaTracks();
+    status.textContent = error?.name === "NotAllowedError"
+      ? "Камерата не е разрешена. Разреши достъпа от настройките на браузъра."
+      : "Камерата не можа да се стартира. Опитай от защитената Vercel страница.";
+  }
+}
+
+function stopLiveBarcodeScanner() {
+  try {
+    window.nutriBarcodeControls?.stop();
+  } catch {
+    // Camera tracks are stopped below as a fallback.
+  }
+  window.nutriBarcodeControls = null;
+  window.nutriBarcodeDetected = false;
+  stopBarcodeMediaTracks();
+  $("barcodeScannerModal")?.classList.add("hidden");
+}
+
+function stopBarcodeMediaTracks() {
+  const video = $("barcodeVideo");
+  const stream = video?.srcObject;
+  if (stream?.getTracks) stream.getTracks().forEach((track) => track.stop());
+  if (video) video.srcObject = null;
 }

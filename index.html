@@ -184,7 +184,7 @@
           <div class="barcode-tools">
             <input id="barcodeValue" type="text" inputmode="numeric" placeholder="Баркод на продукт">
             <button id="lookupBarcode" class="secondary" type="button">Намери</button>
-            <label class="secondary barcode-camera" title="Снимай баркод">▣<input id="barcodeImage" type="file" accept="image/*" capture="environment"></label>
+            <button id="startBarcodeScanner" class="secondary barcode-camera" type="button" title="Отвори баркод четеца" aria-label="Отвори баркод четеца">▣</button>
           </div>
           <p id="barcodeStatus" class="status-line"></p>
           <button id="clearManualFood" class="secondary wide clear-manual-food" type="button">Изчисти данните</button>
@@ -327,6 +327,21 @@
       </section>
     </main>
 
+
+
+    <div id="barcodeScannerModal" class="barcode-scanner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="barcodeScannerTitle">
+      <div class="barcode-scanner-shell">
+        <div class="barcode-scanner-head">
+          <div><small>Баркод четец</small><h2 id="barcodeScannerTitle">Насочи камерата към баркода</h2></div>
+          <button id="closeBarcodeScanner" class="icon-action" type="button" aria-label="Затвори">×</button>
+        </div>
+        <div class="barcode-video-wrap">
+          <video id="barcodeVideo" autoplay playsinline muted></video>
+          <div class="barcode-guide"><span></span></div>
+        </div>
+        <p id="liveBarcodeStatus" class="status-line">Камерата се стартира...</p>
+      </div>
+    </div>
 
     <div id="calorieMascot" class="calorie-mascot" role="status" aria-live="polite" aria-hidden="true">
       <div class="mascot-calorie-card">
