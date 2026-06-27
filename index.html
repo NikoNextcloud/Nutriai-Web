@@ -236,6 +236,18 @@
 
       <section class="view" id="view-progress" data-title="Анализ и прогрес">
         <div class="progress-mini-grid" id="progressCards"></div>
+        <article class="ios-card week-progress-card">
+          <div class="card-title-row week-progress-head">
+            <div><h2><span class="title-icon">◷</span> Седмичен прогрес</h2><span id="weekProgressRange"></span></div>
+            <div class="week-nav">
+              <button id="previousWeek" class="icon-action" type="button" aria-label="Предишна седмица">‹</button>
+              <button id="currentWeek" class="secondary" type="button">Тази седмица</button>
+              <button id="nextWeek" class="icon-action" type="button" aria-label="Следваща седмица">›</button>
+            </div>
+          </div>
+          <div id="weekProgress" class="week-progress"></div>
+          <div class="week-legend"><span><i class="legend-good"></i>В целта</span><span><i class="legend-low"></i>Под целта</span><span><i class="legend-over"></i>Превишени</span></div>
+        </article>
         <article class="ios-card">
           <div class="card-title-row">
             <h2><span class="title-icon">📈</span> История на теглото</h2>
@@ -248,16 +260,6 @@
           <form id="weightForm" class="inline-form">
             <input id="weightEntry" type="number" min="30" max="250" step="0.1" placeholder="74.5">
             <button class="primary" type="submit">Запиши</button>
-          </form>
-        </article>
-      </section>
-
-      <section class="view" id="view-chat" data-title="AI Диетолог">
-        <article class="chat-panel">
-          <div id="chatMessages" class="chat-messages"></div>
-          <form id="chatForm" class="chat-form">
-            <input id="chatInput" type="text" placeholder="Питайте ме за диета, рецепти...">
-            <button class="send-button" type="submit" aria-label="Изпрати">➤</button>
           </form>
         </article>
               <article class="ios-card reminder-card">
@@ -274,6 +276,17 @@
           <button id="saveReminders" class="primary wide" type="button">Запази напомнянето</button>
           <p id="reminderStatus" class="status-line"></p>
         </article>
+      </section>
+
+      <section class="view" id="view-chat" data-title="AI Диетолог">
+        <article class="chat-panel">
+          <div id="chatMessages" class="chat-messages"></div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" placeholder="Питайте ме за диета, рецепти...">
+            <button class="send-button" type="submit" aria-label="Изпрати">➤</button>
+          </form>
+        </article>
+              
       </section>
     </main>
 

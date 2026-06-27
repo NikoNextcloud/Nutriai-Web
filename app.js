@@ -16,6 +16,7 @@ const state = {
   favorites: load("nutriai.favorites", []),
   reminders: load("nutriai.reminders", { water: false, waterInterval: 120, nextWaterAt: 0 }),
   historyDate: "",
+  progressWeekOffset: 0,
   selectedImageDataUrl: "",
   lastAnalysis: null
 };
@@ -698,6 +699,7 @@ function renderProgressCards(targets) {
     progressCard("⚡", "TDEE", targets.tdee, "kcal / ден", "var(--blue)")
   ].join("");
   $("weightGoalLabel").textContent = `Цел: ${state.profile.targetWeight} кг`;
+  renderWeekProgress();
 }
 
 function progressCard(icon, title, value, desc, color) {
@@ -1257,6 +1259,9 @@ function bindEnhancedFeatures() {
   $("exportData")?.addEventListener("click", exportNutriData);
   $("importData")?.addEventListener("change", importNutriData);
   $("saveReminders")?.addEventListener("click", saveReminderSettings);
+  $("previousWeek")?.addEventListener("click", () => { state.progressWeekOffset -= 1; renderWeekProgress(); });
+  $("nextWeek")?.addEventListener("click", () => { state.progressWeekOffset += 1; renderWeekProgress(); });
+  $("currentWeek")?.addEventListener("click", () => { state.progressWeekOffset = 0; renderWeekProgress(); });
 
   hydrateReminderForm();
   renderFavorites();
@@ -1627,4 +1632,43 @@ function selectMealTypeByTime(date = new Date()) {
   document.querySelectorAll("[data-meal]").forEach((button) => {
     button.classList.toggle("active", button.dataset.meal === type);
   });
+}
+
+
+function renderWeekProgress() {
+  const container = $("weekProgress");
+  if (!container) return;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monday = new Date(today);
+  const dayIndex = (today.getDay() + 6) % 7;
+  monday.setDate(today.getDate() - dayIndex + state.progressWeekOffset * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const dayNames = ["Пон", "Вто", "Сря", "Чет", "Пет", "Съб", "Нед"];
+  const limit = Number(state.profile.dailyLimit) || 1;
+
+  $("weekProgressRange").textContent = monday.toLocaleDateString("bg-BG", { day: "numeric", month: "short" }) + " – " + sunday.toLocaleDateString("bg-BG", { day: "numeric", month: "short" });
+  $("nextWeek").disabled = state.progressWeekOffset >= 0;
+
+  container.innerHTML = dayNames.map((name, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    const key = localDateKey(date);
+    const calories = state.meals
+      .filter((meal) => localDateKey(new Date(meal.date)) === key)
+      .reduce((sum, meal) => sum + Number(meal.analysis.totalCalories || 0), 0);
+    const isFuture = date > today;
+    const hasData = calories > 0;
+    const percent = hasData ? Math.round(calories / limit * 100) : 0;
+    const fill = Math.min(percent, 100);
+    const status = isFuture || !hasData ? "week-empty" : percent > 100 ? "week-over" : percent >= 85 ? "week-good" : "week-low";
+    const color = status === "week-over" ? "var(--red)" : status === "week-good" ? "var(--green)" : status === "week-low" ? "var(--yellow)" : "var(--line)";
+    const center = isFuture || !hasData ? "—" : percent + "%";
+    const detail = isFuture ? "Предстои" : hasData ? Math.round(calories) + " kcal" : "Няма данни";
+    return '<div class="week-day ' + status + (key === localDateKey(today) ? ' is-today' : '') + '">' +
+      '<strong>' + name + '</strong>' +
+      '<div class="week-ring" style="background:conic-gradient(' + color + ' ' + (fill * 3.6) + 'deg, var(--card-2) 0deg)"><span>' + center + '</span></div>' +
+      '<b>' + date.getDate() + '</b><small>' + detail + '</small></div>';
+  }).join("");
 }
