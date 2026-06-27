@@ -1268,3 +1268,112 @@ input[type="checkbox"] {
   .week-day { padding-inline: 0; }
   .week-day > small { display: none; }
 }
+
+
+.fridge-card {
+  margin-bottom: 14px;
+}
+
+.fridge-form {
+  margin-top: 14px;
+}
+
+.fridge-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 42px;
+  margin: 12px 0;
+}
+
+.fridge-items .empty-copy {
+  width: 100%;
+}
+
+.fridge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 6px 7px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card-2);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.fridge-chip button {
+  width: 24px;
+  min-height: 24px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.fridge-recipe {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+}
+
+.fridge-recipe-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fridge-recipe-head small {
+  color: var(--muted);
+}
+
+.fridge-recipe-head h3 {
+  margin: 3px 0 0;
+  font-size: 1.15rem;
+}
+
+.fridge-recipe-head > span {
+  color: var(--orange);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fridge-recipe > p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.recipe-meta span {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--card-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fridge-recipe h4 {
+  margin: 14px 0 6px;
+  font-size: 0.88rem;
+}
+
+.fridge-recipe ul,
+.fridge-recipe ol {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--muted);
+  line-height: 1.4;
+}

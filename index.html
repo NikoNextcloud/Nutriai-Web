@@ -279,6 +279,20 @@
       </section>
 
       <section class="view" id="view-chat" data-title="AI Диетолог">
+        <article class="ios-card fridge-card">
+          <div class="card-title-row">
+            <h2><span class="title-icon">❄</span> Хладилник</h2>
+            <button id="clearFridge" class="text-button" type="button">Изчисти</button>
+          </div>
+          <form id="fridgeForm" class="inline-form fridge-form">
+            <input id="fridgeInput" type="text" maxlength="80" placeholder="Напр. яйца, домати, сирене">
+            <button class="secondary" type="submit">Добави</button>
+          </form>
+          <div id="fridgeItems" class="fridge-items"></div>
+          <button id="generateFridgeRecipe" class="primary wide" type="button">Предложи AI рецепта</button>
+          <p id="fridgeStatus" class="status-line"></p>
+          <div id="fridgeRecipe" class="fridge-recipe hidden"></div>
+        </article>
         <article class="chat-panel">
           <div id="chatMessages" class="chat-messages"></div>
           <form id="chatForm" class="chat-form">

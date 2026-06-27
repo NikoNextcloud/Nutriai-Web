@@ -15,6 +15,8 @@ const state = {
   aiPlanVariant: load("nutriai.aiPlanVariant", 0),
   favorites: load("nutriai.favorites", []),
   reminders: load("nutriai.reminders", { water: false, waterInterval: 120, nextWaterAt: 0 }),
+  fridgeItems: load("nutriai.fridgeItems", []),
+  fridgeRecipe: load("nutriai.fridgeRecipe", null),
   historyDate: "",
   progressWeekOffset: 0,
   selectedImageDataUrl: "",
@@ -39,6 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindSegments();
   bindProgress();
   bindChat();
+  bindFridge();
   bindPlanActions();
   bindProfileEditor();
   bindEnhancedFeatures();
@@ -104,7 +107,9 @@ async function hydratePersistentState() {
     loadPersistent("nutriai.aiPlan", state.aiPlan),
     loadPersistent("nutriai.aiPlanVariant", state.aiPlanVariant),
     loadPersistent("nutriai.favorites", state.favorites),
-    loadPersistent("nutriai.reminders", state.reminders)
+    loadPersistent("nutriai.reminders", state.reminders),
+    loadPersistent("nutriai.fridgeItems", state.fridgeItems),
+    loadPersistent("nutriai.fridgeRecipe", state.fridgeRecipe)
   ]);
 
   [
@@ -116,7 +121,9 @@ async function hydratePersistentState() {
     state.aiPlan,
     state.aiPlanVariant,
     state.favorites,
-    state.reminders
+    state.reminders,
+    state.fridgeItems,
+    state.fridgeRecipe
   ] = values;
 }
 
@@ -1671,4 +1678,123 @@ function renderWeekProgress() {
       '<div class="week-ring" style="background:conic-gradient(' + color + ' ' + (fill * 3.6) + 'deg, var(--card-2) 0deg)"><span>' + center + '</span></div>' +
       '<b>' + date.getDate() + '</b><small>' + detail + '</small></div>';
   }).join("");
+}
+
+
+function bindFridge() {
+  $("fridgeForm")?.addEventListener("submit", addFridgeItems);
+  $("fridgeItems")?.addEventListener("click", removeFridgeItem);
+  $("clearFridge")?.addEventListener("click", clearFridgeItems);
+  $("generateFridgeRecipe")?.addEventListener("click", generateFridgeRecipe);
+  renderFridgeItems();
+  renderFridgeRecipe();
+}
+
+async function addFridgeItems(event) {
+  event.preventDefault();
+  const names = $("fridgeInput").value.split(",").map((name) => name.trim()).filter(Boolean);
+  if (!names.length) return;
+  for (const name of names) {
+    if (!state.fridgeItems.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+      state.fridgeItems.push({ id: crypto.randomUUID(), name });
+    }
+  }
+  $("fridgeInput").value = "";
+  await save("nutriai.fridgeItems", state.fridgeItems);
+  renderFridgeItems();
+}
+
+async function removeFridgeItem(event) {
+  const id = event.target.dataset.removeFridge;
+  if (!id) return;
+  state.fridgeItems = state.fridgeItems.filter((item) => item.id !== id);
+  await save("nutriai.fridgeItems", state.fridgeItems);
+  renderFridgeItems();
+}
+
+async function clearFridgeItems() {
+  if (!state.fridgeItems.length) return;
+  state.fridgeItems = [];
+  state.fridgeRecipe = null;
+  await Promise.all([save("nutriai.fridgeItems", []), save("nutriai.fridgeRecipe", null)]);
+  renderFridgeItems();
+  renderFridgeRecipe();
+  $("fridgeStatus").textContent = "Хладилникът е изчистен.";
+}
+
+function renderFridgeItems() {
+  const container = $("fridgeItems");
+  if (!container) return;
+  if (!state.fridgeItems.length) {
+    container.innerHTML = '<div class="empty-copy">Добави продуктите, които имаш вкъщи.</div>';
+    return;
+  }
+  container.innerHTML = state.fridgeItems.map((item) =>
+    '<span class="fridge-chip">' + escapeHtml(item.name) +
+    '<button type="button" data-remove-fridge="' + escapeHtml(item.id) + '" aria-label="Премахни ' + escapeHtml(item.name) + '">×</button></span>'
+  ).join("");
+}
+
+async function generateFridgeRecipe() {
+  if (!state.fridgeItems.length) {
+    $("fridgeStatus").textContent = "Първо добави поне един продукт.";
+    return;
+  }
+  if (!canUseServerProxy() && !state.apiKey) {
+    $("fridgeStatus").textContent = "AI рецептата работи през Vercel с настроен GROQ_API_KEY.";
+    return;
+  }
+  const button = $("generateFridgeRecipe");
+  button.disabled = true;
+  $("fridgeStatus").textContent = "Създавам рецепта от наличните продукти...";
+  const available = state.fridgeItems.map((item) => item.name).join(", ");
+  const remaining = Math.max(0, state.profile.dailyLimit - consumedToday());
+  const prompt = [
+    "Създай една практична рецепта на български основно от наличните продукти.",
+    "Налични продукти: " + available,
+    "Цел: " + state.profile.goal,
+    "Дневен лимит: " + state.profile.dailyLimit + " kcal",
+    "Оставащи калории днес: " + remaining + " kcal",
+    "Може да използваш само базови продукти като вода, сол, черен пипер и малко мазнина, но ги отбележи отделно.",
+    "Не включвай друг основен продукт, който не е в списъка.",
+    'Върни само JSON: {"title":"","description":"","servings":1,"timeMinutes":0,"ingredients":[""],"basics":[""],"steps":[""],"caloriesPerServing":0,"proteinPerServing":0,"tip":""}'
+  ].join("\n");
+  try {
+    const data = await callGroq([
+      { role: "system", content: "Ти си практичен нутриционист и готвач. Връщай само валиден JSON на български." },
+      { role: "user", content: prompt }
+    ], true);
+    state.fridgeRecipe = parseGroqJsonLoose(data);
+    await save("nutriai.fridgeRecipe", state.fridgeRecipe);
+    renderFridgeRecipe();
+    $("fridgeStatus").textContent = "Рецептата е готова.";
+  } catch (error) {
+    $("fridgeStatus").textContent = error.message || "Не успях да създам рецепта.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderFridgeRecipe() {
+  const container = $("fridgeRecipe");
+  if (!container) return;
+  const recipe = state.fridgeRecipe;
+  if (!recipe) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+  const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+  const basics = Array.isArray(recipe.basics) ? recipe.basics : [];
+  const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
+  container.innerHTML =
+    '<div class="fridge-recipe-head"><div><small>AI рецепта</small><h3>' + escapeHtml(recipe.title || "Рецепта") + '</h3></div>' +
+    '<span>' + Math.round(Number(recipe.caloriesPerServing) || 0) + ' kcal</span></div>' +
+    '<p>' + escapeHtml(recipe.description || "") + '</p>' +
+    '<div class="recipe-meta"><span>' + Math.max(1, Number(recipe.servings) || 1) + ' порции</span><span>' + Math.round(Number(recipe.timeMinutes) || 0) + ' мин</span><span>' + Math.round(Number(recipe.proteinPerServing) || 0) + ' г протеин</span></div>' +
+    '<h4>Продукти</h4><ul>' + ingredients.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul>' +
+    (basics.length ? '<h4>Основни добавки</h4><ul>' + basics.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul>' : '') +
+    '<h4>Приготвяне</h4><ol>' + steps.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ol>' +
+    (recipe.tip ? '<div class="recommendation-box"><strong>Съвет</strong><span>' + escapeHtml(recipe.tip) + '</span></div>' : '');
+  container.classList.remove("hidden");
 }
