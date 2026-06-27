@@ -1561,3 +1561,122 @@ input[type="checkbox"] {
   0%, 100% { opacity: 0; transform: none; }
   8%, 92% { opacity: 1; transform: none; }
 }
+
+
+.photo-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.photo-frame > #foodImage {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.photo-capture-area {
+  display: grid;
+  min-height: 250px;
+  place-items: center;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.photo-frame.has-scan-results .photo-capture-area,
+.photo-frame.has-scan-results #preview {
+  min-height: 370px;
+  height: 370px;
+}
+
+.food-scan-overlay {
+  position: absolute;
+  inset: 10px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.scan-food-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: min(92%, 390px);
+  min-height: 48px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 20px rgba(28, 20, 14, 0.18);
+  color: #27231f;
+  pointer-events: auto;
+}
+
+.scan-food-label:nth-child(even) {
+  align-self: flex-end;
+}
+
+.scan-food-copy {
+  min-width: 0;
+}
+
+.scan-food-copy strong {
+  display: block;
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scan-food-copy strong small {
+  color: #777;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.scan-food-copy > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 3px;
+  color: #6f6b66;
+  font-size: 0.58rem;
+}
+
+.scan-food-copy > span b:first-child { color: #e65b3d; }
+.scan-food-copy > span b:nth-child(2) { color: #248a58; }
+.scan-food-copy > span b:nth-child(3) { color: #3977b7; }
+.scan-food-copy > span b:nth-child(4) { color: #b98a20; }
+
+.scan-food-label button {
+  min-width: 58px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #f0f1f3;
+  color: #65686d;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.scan-food-label button:disabled {
+  color: #248a58;
+}
+
+@media (max-width: 430px) {
+  .photo-frame.has-scan-results .photo-capture-area,
+  .photo-frame.has-scan-results #preview {
+    min-height: 350px;
+    height: 350px;
+  }
+
+  .scan-food-label {
+    width: 96%;
+  }
+}

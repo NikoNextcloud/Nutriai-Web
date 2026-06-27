@@ -739,10 +739,14 @@ function bindCamera() {
     $("preview").style.display = "block";
     $("photoPlaceholder").style.display = "none";
     $("analysisPanel").classList.add("hidden");
+    $("foodScanOverlay").classList.add("hidden");
+    $("foodScanOverlay").innerHTML = "";
+    $("photoFrame").classList.remove("has-scan-results");
   });
 
   $("analyzeButton").addEventListener("click", analyzeFood);
   $("saveMeal").addEventListener("click", saveAnalyzedMeal);
+  $("foodScanOverlay").addEventListener("click", handleDetectedFoodAdd);
 }
 
 
@@ -887,6 +891,7 @@ async function analyzeFood() {
 
     state.lastAnalysis = parseGroqJson(result);
     renderAnalysisSummary(state.lastAnalysis);
+    renderFoodScanOverlay(state.lastAnalysis);
     populateAnalysisCorrection();
     $("analysisPanel").classList.remove("hidden");
     $("analysisStatus").textContent = "Готово.";
@@ -1816,4 +1821,63 @@ function showCalorieMascot(calories) {
     mascot.classList.remove("show");
     mascot.setAttribute("aria-hidden", "true");
   }, 4000);
+}
+
+
+function renderFoodScanOverlay(analysis) {
+  const overlay = $("foodScanOverlay");
+  const foods = Array.isArray(analysis.foods) ? analysis.foods.slice(0, 5) : [];
+  if (!foods.length) {
+    overlay.classList.add("hidden");
+    $("photoFrame").classList.remove("has-scan-results");
+    return;
+  }
+  overlay.innerHTML = foods.map((food, index) =>
+    '<div class="scan-food-label">' +
+      '<div class="scan-food-copy"><strong>' + escapeHtml(food.name || "Храна") + ' <small>' + Math.round(food.estimatedGrams || 0) + ' г</small></strong>' +
+      '<span><b>🔥 ' + Math.round(food.calories || 0) + '</b><b>П ' + Math.round(food.protein || 0) + '</b><b>В ' + Math.round(food.carbs || 0) + '</b><b>М ' + Math.round(food.fat || 0) + '</b></span></div>' +
+      '<button type="button" data-add-food-index="' + index + '">Добави</button>' +
+    '</div>'
+  ).join("");
+  overlay.classList.remove("hidden");
+  $("photoFrame").classList.add("has-scan-results");
+}
+
+async function handleDetectedFoodAdd(event) {
+  const value = event.target.dataset.addFoodIndex;
+  if (value === undefined) return;
+  const index = Number(value);
+  const food = state.lastAnalysis?.foods?.[index];
+  if (!food) return;
+  const button = event.target;
+  button.disabled = true;
+  const meal = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title: food.name || "Храна",
+    mealType: $("mealType").value,
+    image: "",
+    quantityGrams: food.estimatedGrams || 0,
+    analysis: {
+      foods: [structuredClone(food)],
+      totalCalories: Number(food.calories) || 0,
+      protein: Number(food.protein) || 0,
+      carbs: Number(food.carbs) || 0,
+      fat: Number(food.fat) || 0,
+      fiber: Number(food.fiber) || 0,
+      rating: "Добавено от AI скенера",
+      reason: "Отделен продукт, разпознат от снимката."
+    }
+  };
+  state.meals.unshift(meal);
+  try {
+    await save("nutriai.meals", state.meals);
+    renderAll();
+    button.textContent = "Добавено";
+    $("analysisStatus").textContent = food.name + " е добавено към дневника.";
+  } catch (error) {
+    state.meals = state.meals.filter((item) => item.id !== meal.id);
+    button.disabled = false;
+    $("analysisStatus").textContent = "Продуктът не беше запазен.";
+  }
 }

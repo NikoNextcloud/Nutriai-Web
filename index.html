@@ -146,11 +146,14 @@
 
       <section class="view" id="view-camera" data-title="Камера за храна">
         <article class="photo-card">
-          <label class="photo-frame" for="foodImage">
+          <div class="photo-frame" id="photoFrame">
             <input id="foodImage" type="file" accept="image/*" capture="environment">
-            <img id="preview" alt="Преглед на снимката">
-            <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
-          </label>
+            <label class="photo-capture-area" for="foodImage">
+              <img id="preview" alt="Преглед на снимката">
+              <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
+            </label>
+            <div id="foodScanOverlay" class="food-scan-overlay hidden" aria-live="polite"></div>
+          </div>
 
           <div class="segmented meal-tabs">
             <button type="button" class="active" data-meal="breakfast">Закуска</button>
