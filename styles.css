@@ -3262,3 +3262,117 @@ label { color: var(--muted) !important; font-weight: 700 !important; }
 
 /* ---- Analysis pills ---- */
 .analysis-pills .pill { background: var(--card-2) !important; border-radius: 12px !important; }
+
+
+.analysis-save-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 8px;
+}
+
+#toggleAnalysisFavorite.active,
+.favorite-toggle.active,
+.scan-favorite-button.active {
+  border-color: color-mix(in srgb, var(--red) 35%, var(--line));
+  background: color-mix(in srgb, var(--red) 10%, var(--card));
+  color: var(--red);
+}
+
+.scan-food-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scan-food-actions .scan-favorite-button {
+  min-width: 34px;
+  width: 34px;
+  padding: 5px;
+  font-size: 1rem;
+}
+
+.meal-macro-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.meal-macro-summary span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 0.62rem;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.meal-macro-summary .macro-protein {
+  color: #18865a;
+}
+
+.meal-macro-summary .macro-carbs {
+  color: #2d72b8;
+}
+
+.meal-macro-summary .macro-fat {
+  color: #a77911;
+}
+
+.favorite-toggle {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.dashboard-favorite-row .favorite-food-main span {
+  display: block;
+  margin-top: 4px;
+}
+
+@media (max-width: 430px) {
+  .analysis-save-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .meal-row-side {
+    grid-column: 2;
+    width: 100%;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    justify-items: start;
+  }
+
+  .meal-row-side .meal-actions {
+    justify-self: end;
+  }
+
+  .scan-food-label {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scan-food-actions {
+    justify-content: flex-end;
+  }
+}
+
+
+.favorite-macro-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 5px;
+}
+
+.favorite-macro-line b {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 760;
+}

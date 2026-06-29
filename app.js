@@ -486,6 +486,7 @@ function renderDashboard() {
 
   renderAIPlan();
   renderGoalSuggestions(targets);
+  renderFavorites();
   renderTodayMeals();
   renderProgressCards(targets);
 }
@@ -785,6 +786,7 @@ function bindCamera() {
 
   $("analyzeButton").addEventListener("click", analyzeFood);
   $("saveMeal").addEventListener("click", saveAnalyzedMeal);
+  $("toggleAnalysisFavorite")?.addEventListener("click", toggleAnalysisFavorite);
   $("clearAnalysis").addEventListener("click", clearCameraAnalysis);
   $("foodScanOverlay").addEventListener("click", handleDetectedFoodAdd);
 }
@@ -941,6 +943,7 @@ async function analyzeFood() {
     state.lastAnalysis = parseGroqJson(result);
     renderAnalysisSummary(state.lastAnalysis);
     renderFoodScanOverlay(state.lastAnalysis);
+    renderAnalysisFavoriteButton();
     populateAnalysisCorrection();
     $("analysisPanel").classList.remove("hidden");
     $("analysisStatus").textContent = "Готово.";
@@ -1127,22 +1130,30 @@ function mealRowHtml(meal, includeDate = false) {
   const time = includeDate ? new Date(meal.date).toLocaleString("bg-BG") : new Date(meal.date).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" });
   const mealType = mealTypeLabel(meal.mealType);
   const health = getHealthRating(meal.analysis || {});
-  return `
-    <div class="meal-row meal-health ${health.className}" data-meal-id="${escapeHtml(meal.id)}">
-      ${mealImageHtml(meal)}
-      <div class="meal-row-main">
-        <strong>${mealTypeIcon(meal.mealType)} ${escapeHtml(meal.title)}</strong>
-        <p>${escapeHtml(time)} • ${escapeHtml(mealType)} • ${escapeHtml(meal.analysis.rating || "")}</p>
-      </div>
-      <div class="meal-row-side">
-        <strong>+${Math.round(meal.analysis.totalCalories || 0)} kcal</strong>
-        <div class="meal-actions">
-          <button type="button" class="icon-action" data-edit-meal="${escapeHtml(meal.id)}" title="Редактирай" aria-label="Редактирай">✎</button>
-          <button type="button" class="icon-action danger" data-delete-meal="${escapeHtml(meal.id)}" title="Изтрий" aria-label="Изтрий">×</button>
-        </div>
-      </div>
-    </div>
-  `;
+  const nutrition = nutritionFromMeal(meal);
+  const favorite = !includeDate && findFavoriteByName(meal.title);
+  const favoriteButton = !includeDate
+    ? '<button type="button" class="icon-action favorite-toggle ' + (favorite ? 'active' : '') + '" data-toggle-meal-favorite="' + escapeHtml(meal.id) + '" title="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '" aria-label="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '">' + (favorite ? '♥' : '♡') + '</button>'
+    : '';
+  return '<div class="meal-row meal-health ' + health.className + '" data-meal-id="' + escapeHtml(meal.id) + '">' +
+    mealImageHtml(meal) +
+    '<div class="meal-row-main">' +
+      '<strong>' + mealTypeIcon(meal.mealType) + ' ' + escapeHtml(meal.title) + '</strong>' +
+      '<p>' + escapeHtml(time) + ' • ' + escapeHtml(mealType) + ' • ' + escapeHtml(meal.analysis.rating || '') + '</p>' +
+      '<div class="meal-macro-summary" aria-label="Макронутриенти">' +
+        '<span class="macro-protein">П ' + round(nutrition.protein, 1) + ' г</span>' +
+        '<span class="macro-carbs">В ' + round(nutrition.carbs, 1) + ' г</span>' +
+        '<span class="macro-fat">М ' + round(nutrition.fat, 1) + ' г</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="meal-row-side">' +
+      '<strong>+' + Math.round(meal.analysis.totalCalories || 0) + ' kcal</strong>' +
+      '<div class="meal-actions">' + favoriteButton +
+        '<button type="button" class="icon-action" data-edit-meal="' + escapeHtml(meal.id) + '" title="Редактирай" aria-label="Редактирай">✎</button>' +
+        '<button type="button" class="icon-action danger" data-delete-meal="' + escapeHtml(meal.id) + '" title="Изтрий" aria-label="Изтрий">×</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function mealImageHtml(meal) {
@@ -1393,7 +1404,7 @@ function renderFavorites() {
   const dashboard = $("dashboardFavorites");
   if (!dashboard) return;
   if (!state.favorites.length) {
-    dashboard.innerHTML = '<div class="empty-copy">Все още нямате любими храни. Добавете храна ръчно и отбележете „Запази като любим продукт“.</div>';
+    dashboard.innerHTML = '<div class="empty-copy">Все още нямате любими храни. Добавете продукт от AI снимка, от днешните хранения или чрез ръчно въвеждане.</div>';
     return;
   }
   dashboard.innerHTML = state.favorites.map((item) => {
@@ -1404,6 +1415,7 @@ function renderFavorites() {
         <div class="favorite-food-main">
           <strong>${escapeHtml(item.name)}</strong>
           <span>${escapeHtml(portion)} · ${nutrition.calories} kcal</span>
+          <div class="favorite-macro-line"><b>П ${round(nutrition.protein, 1)} г</b><b>В ${round(nutrition.carbs, 1)} г</b><b>М ${round(nutrition.fat, 1)} г</b></div>
         </div>
         <button type="button" class="favorite-add-button" data-add-favorite="${escapeHtml(item.id)}" title="Добави към днешните калории">＋ Добави</button>
         <button type="button" class="icon-action danger" data-delete-favorite="${escapeHtml(item.id)}" title="Премахни от любими" aria-label="Премахни от любими">×</button>
@@ -1573,6 +1585,8 @@ async function deleteFavorite(id) {
 }
 
 function handleMealHistoryAction(event) {
+  const favoriteMealId = event.target.dataset.toggleMealFavorite;
+  if (favoriteMealId) { toggleMealFavorite(favoriteMealId); return; }
   const editId = event.target.dataset.editMeal;
   const deleteId = event.target.dataset.deleteMeal;
   if (editId) openMealEditor(editId);
@@ -1853,7 +1867,19 @@ function applyAnalysisCorrection() {
   state.lastAnalysis.foods = state.lastAnalysis.foods?.length
     ? [{ ...state.lastAnalysis.foods[0], name }, ...state.lastAnalysis.foods.slice(1)]
     : [{ name, estimatedGrams: 0, calories: state.lastAnalysis.totalCalories }];
+  if (state.lastAnalysis.foods?.[0]) {
+    Object.assign(state.lastAnalysis.foods[0], {
+      name,
+      calories: state.lastAnalysis.totalCalories,
+      protein: state.lastAnalysis.protein,
+      carbs: state.lastAnalysis.carbs,
+      fat: state.lastAnalysis.fat,
+      fiber: state.lastAnalysis.fiber
+    });
+  }
   renderAnalysisSummary(state.lastAnalysis);
+  renderFoodScanOverlay(state.lastAnalysis);
+  renderAnalysisFavoriteButton();
   $("analysisStatus").textContent = "Корекцията е приложена. Можеш да добавиш храната.";
 }
 
@@ -2160,18 +2186,27 @@ function renderFoodScanOverlay(analysis) {
     $("photoFrame").classList.remove("has-scan-results");
     return;
   }
-  overlay.innerHTML = foods.map((food, index) =>
-    '<div class="scan-food-label">' +
-      '<div class="scan-food-copy"><strong>' + escapeHtml(food.name || "Храна") + ' <small>' + Math.round(food.estimatedGrams || 0) + ' г</small></strong>' +
-      '<span><b>🔥 ' + Math.round(food.calories || 0) + '</b><b>П ' + Math.round(food.protein || 0) + '</b><b>В ' + Math.round(food.carbs || 0) + '</b><b>М ' + Math.round(food.fat || 0) + '</b></span></div>' +
-      '<button type="button" data-add-food-index="' + index + '">Добави</button>' +
-    '</div>'
-  ).join("");
+  overlay.innerHTML = foods.map((food, index) => {
+    const favorite = findFavoriteByName(food.name);
+    return '<div class="scan-food-label">' +
+      '<div class="scan-food-copy"><strong>' + escapeHtml(food.name || "Храна") + ' <small>' + Math.round(food.estimatedGrams || food.grams || 0) + ' г</small></strong>' +
+      '<span><b>🔥 ' + Math.round(food.calories || 0) + '</b><b>П ' + round(nutritionNumber(food.protein), 1) + '</b><b>В ' + round(nutritionNumber(food.carbs), 1) + '</b><b>М ' + round(nutritionNumber(food.fat), 1) + '</b></span></div>' +
+      '<div class="scan-food-actions">' +
+        '<button type="button" class="scan-favorite-button' + (favorite ? ' active' : '') + '" data-favorite-food-index="' + index + '" title="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '" aria-label="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '">' + (favorite ? '♥' : '♡') + '</button>' +
+        '<button type="button" data-add-food-index="' + index + '">Добави</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
   overlay.classList.remove("hidden");
   $("photoFrame").classList.add("has-scan-results");
 }
 
 async function handleDetectedFoodAdd(event) {
+  const favoriteValue = event.target.dataset.favoriteFoodIndex;
+  if (favoriteValue !== undefined) {
+    await toggleScannedFoodFavorite(Number(favoriteValue));
+    return;
+  }
   const value = event.target.dataset.addFoodIndex;
   if (value === undefined) return;
   const index = Number(value);
@@ -2179,24 +2214,7 @@ async function handleDetectedFoodAdd(event) {
   if (!food) return;
   const button = event.target;
   button.disabled = true;
-  const meal = {
-    id: crypto.randomUUID(),
-    date: new Date().toISOString(),
-    title: food.name || "Храна",
-    mealType: $("mealType").value,
-    image: "",
-    quantityGrams: food.estimatedGrams || 0,
-    analysis: {
-      foods: [structuredClone(food)],
-      totalCalories: Number(food.calories) || 0,
-      protein: Number(food.protein) || 0,
-      carbs: Number(food.carbs) || 0,
-      fat: Number(food.fat) || 0,
-      fiber: Number(food.fiber) || 0,
-      rating: "Добавено от AI скенера",
-      reason: "Отделен продукт, разпознат от снимката."
-    }
-  };
+  const meal = mealFromDetectedFood(food);
   state.meals.unshift(meal);
   try {
     await save("nutriai.meals", state.meals);
@@ -2210,6 +2228,26 @@ async function handleDetectedFoodAdd(event) {
   }
 }
 
+function mealFromDetectedFood(food) {
+  return {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title: food.name || "Храна",
+    mealType: $("mealType").value,
+    image: "",
+    quantityGrams: nutritionNumber(food.estimatedGrams ?? food.grams),
+    analysis: {
+      foods: [structuredClone(food)],
+      totalCalories: nutritionNumber(food.calories),
+      protein: nutritionNumber(food.protein),
+      carbs: nutritionNumber(food.carbs),
+      fat: nutritionNumber(food.fat),
+      fiber: nutritionNumber(food.fiber),
+      rating: "Добавено от AI скенера",
+      reason: "Отделен продукт, разпознат от снимката."
+    }
+  };
+}
 
 function clearCameraAnalysis() {
   state.selectedImageDataUrl = "";
@@ -2219,6 +2257,7 @@ function clearCameraAnalysis() {
   $("preview").style.display = "none";
   $("photoPlaceholder").style.display = "";
   $("analysisPanel").classList.add("hidden");
+  renderAnalysisFavoriteButton();
   $("foodScanOverlay").classList.add("hidden");
   $("foodScanOverlay").innerHTML = "";
   $("photoFrame").classList.remove("has-scan-results");
@@ -2305,4 +2344,122 @@ function stopBarcodeMediaTracks() {
   const stream = video?.srcObject;
   if (stream?.getTracks) stream.getTracks().forEach((track) => track.stop());
   if (video) video.srcObject = null;
+}
+
+
+function favoriteNameKey(name) {
+  return String(name || "").trim().toLocaleLowerCase("bg-BG").replace(/\s+/g, " ");
+}
+
+function findFavoriteByName(name) {
+  const key = favoriteNameKey(name);
+  return state.favorites.find((favorite) => favoriteNameKey(favorite.name) === key) || null;
+}
+
+function favoriteFromMeal(meal) {
+  const nutrition = nutritionFromMeal(meal);
+  const grams = nutritionNumber(meal.quantityGrams)
+    || nutritionNumber(meal.analysis?.foods?.[0]?.estimatedGrams)
+    || nutritionNumber(meal.analysis?.foods?.[0]?.grams);
+  const calories = Math.round(nutritionNumber(meal.analysis?.totalCalories));
+  return {
+    id: crypto.randomUUID(),
+    name: meal.title || meal.analysis?.foods?.[0]?.name || "Храна",
+    grams,
+    per100: false,
+    calories,
+    protein: nutrition.protein,
+    carbs: nutrition.carbs,
+    fat: nutrition.fat,
+    fiber: nutrition.fiber,
+    portionNutrition: {
+      calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      fiber: nutrition.fiber
+    }
+  };
+}
+
+async function setMealFavorite(meal, shouldSave) {
+  const existing = findFavoriteByName(meal.title);
+  if (shouldSave) {
+    const next = favoriteFromMeal(meal);
+    if (existing) state.favorites[state.favorites.indexOf(existing)] = { ...next, id: existing.id };
+    else state.favorites.unshift(next);
+  } else if (existing) {
+    state.favorites = state.favorites.filter((favorite) => favorite.id !== existing.id);
+  }
+  await save("nutriai.favorites", state.favorites);
+  renderFavorites();
+  renderTodayMeals();
+  if (state.lastAnalysis) {
+    renderFoodScanOverlay(state.lastAnalysis);
+    renderAnalysisFavoriteButton();
+  }
+}
+
+async function toggleScannedFoodFavorite(index) {
+  const food = state.lastAnalysis?.foods?.[index];
+  if (!food) return;
+  const meal = mealFromDetectedFood(food);
+  const existing = findFavoriteByName(meal.title);
+  await setMealFavorite(meal, !existing);
+  $("analysisStatus").textContent = existing
+    ? meal.title + " е премахнато от любими."
+    : meal.title + " е запазено в любими.";
+}
+
+function analysisAsMeal() {
+  const analysis = state.lastAnalysis;
+  if (!analysis) return null;
+  const foods = Array.isArray(analysis.foods) ? analysis.foods : [];
+  const title = foods.length === 1
+    ? foods[0].name
+    : foods.slice(0, 3).map((food) => food.name).filter(Boolean).join(", ") || "AI хранене";
+  return {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title,
+    mealType: $("mealType").value,
+    image: "",
+    quantityGrams: foods.reduce((sum, food) => sum + nutritionNumber(food.estimatedGrams ?? food.grams), 0),
+    analysis: structuredClone(analysis)
+  };
+}
+
+async function toggleAnalysisFavorite() {
+  const meal = analysisAsMeal();
+  if (!meal) return;
+  const existing = findFavoriteByName(meal.title);
+  await setMealFavorite(meal, !existing);
+  $("analysisStatus").textContent = existing
+    ? meal.title + " е премахнато от любими."
+    : meal.title + " е запазено в любими.";
+}
+
+function renderAnalysisFavoriteButton() {
+  const button = $("toggleAnalysisFavorite");
+  if (!button) return;
+  const meal = analysisAsMeal();
+  if (!meal) {
+    button.textContent = "♡ Запази в любими";
+    button.classList.remove("active");
+    return;
+  }
+  const active = Boolean(findFavoriteByName(meal.title));
+  button.textContent = active ? "♥ В любими" : "♡ Запази в любими";
+  button.classList.toggle("active", active);
+}
+
+
+async function toggleMealFavorite(mealId) {
+  const meal = state.meals.find((item) => item.id === mealId);
+  if (!meal) return;
+  const existing = findFavoriteByName(meal.title);
+  await setMealFavorite(meal, !existing);
+  $("favoriteQuickStatus").textContent = existing
+    ? meal.title + " е премахнато от любими."
+    : meal.title + " е запазено в любими.";
 }
