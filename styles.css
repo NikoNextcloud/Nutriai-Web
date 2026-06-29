@@ -2939,3 +2939,326 @@ canvas {
     transition: none;
   }
 }
+
+/* =====================================================================
+   PREMIUM THEME — final override layer (NutriAI)
+   ===================================================================== */
+:root,
+[data-theme="light"] {
+  --bg: #FBFAF6;
+  --card: #ffffff;
+  --card-2: #F5F7F4;
+  --text: #14201a;
+  --muted: #9aa49d;
+  --line: rgba(20, 45, 32, 0.06);
+  --green: #15A06A;
+  --green-strong: #0E8154;
+  --green-soft: #EAF7F0;
+  --blue: #2E8FE6;
+  --yellow: #E9A521;
+  --red: #E2533B;
+  --orange: #E2533B;
+  --orange-soft: rgba(226, 83, 59, 0.12);
+  --shadow: 0 14px 34px rgba(20, 45, 32, 0.07);
+  --calorie-rgb: 21, 160, 106;
+  --calorie-wash-top: 0.05;
+  --calorie-wash-bottom: 0.02;
+}
+
+[data-theme="dark"] {
+  --bg: #0E1714;
+  --card: #16201B;
+  --card-2: #1E2A23;
+  --text: #EAF3EE;
+  --muted: #8FA398;
+  --line: rgba(255, 255, 255, 0.07);
+  --green-soft: rgba(21, 160, 106, 0.16);
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.40);
+}
+
+/* ---- Typography ---- */
+body,
+.phone-app,
+.onboarding-screen,
+.calorie-mascot,
+.barcode-scanner-modal,
+button,
+input,
+select,
+textarea {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+h1 { font-weight: 800 !important; letter-spacing: -0.02em !important; }
+h2 { font-weight: 800 !important; font-size: 1.02rem !important; }
+
+.eyebrow {
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--green) !important;
+  font-size: 0.72rem !important;
+}
+.onboarding-hero .eyebrow { color: var(--muted) !important; }
+
+.current-date { color: var(--muted) !important; font-weight: 600 !important; }
+
+/* ---- Cards ---- */
+.ios-card,
+.calorie-card,
+.photo-card,
+.chat-panel,
+.onboarding-card {
+  border-radius: 22px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 12px 30px rgba(20, 45, 32, 0.06) !important;
+}
+.macro-card,
+.progress-mini-card {
+  border-radius: 18px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 9px 24px rgba(20, 45, 32, 0.05) !important;
+}
+
+/* ---- Logo mark ---- */
+.app-mark {
+  background: linear-gradient(150deg, #1FAE6E, #0E8154) !important;
+  box-shadow: 0 12px 26px rgba(21, 160, 106, 0.32) !important;
+  border-radius: 18px !important;
+  color: #fff !important;
+}
+
+/* ---- Icon chips ---- */
+.title-icon {
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+  border-radius: 9px !important;
+}
+.field-icon {
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+  border-radius: 9px !important;
+}
+.round-button {
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 5px 14px rgba(20, 45, 32, 0.06) !important;
+}
+
+/* ---- Buttons ---- */
+.primary {
+  background: var(--green) !important;
+  color: #fff !important;
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 12px 28px rgba(21, 160, 106, 0.28) !important;
+}
+.setup-button,
+#analyzeButton {
+  background: linear-gradient(135deg, #F0824A, #E5633C) !important;
+  box-shadow: 0 14px 30px rgba(229, 99, 60, 0.30) !important;
+}
+.secondary {
+  background: #fff !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+}
+.text-button { color: var(--green) !important; font-weight: 800 !important; background: transparent !important; }
+.soft-blue { background: #E2F0FC !important; color: #2E8FE6 !important; border-radius: 13px !important; font-weight: 800 !important; }
+.solid-blue { background: #2E8FE6 !important; color: #fff !important; border-radius: 13px !important; font-weight: 800 !important; }
+
+/* ---- Inputs ---- */
+input,
+select,
+textarea {
+  background: #fff !important;
+  border: 1px solid rgba(20, 45, 32, 0.09) !important;
+  border-radius: 14px !important;
+  min-height: 48px !important;
+  color: var(--text) !important;
+  font-weight: 600 !important;
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea { background: var(--card-2) !important; border-color: var(--line) !important; }
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 0 3px rgba(21, 160, 106, 0.12) !important;
+}
+label { color: var(--muted) !important; font-weight: 700 !important; }
+
+/* ---- Segmented controls ---- */
+.segmented {
+  background: #EFEEE8 !important;
+  border-radius: 15px !important;
+  padding: 4px !important;
+}
+[data-theme="dark"] .segmented { background: var(--card-2) !important; }
+.segmented button {
+  border-radius: 11px !important;
+  color: var(--muted) !important;
+  font-weight: 700 !important;
+}
+.segmented button.active {
+  background: #fff !important;
+  color: var(--text) !important;
+  box-shadow: 0 3px 8px rgba(20, 40, 30, 0.10) !important;
+}
+[data-theme="dark"] .segmented button.active { background: var(--card) !important; color: var(--text) !important; }
+.meal-tabs.segmented {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 8px 20px rgba(20, 45, 32, 0.05) !important;
+}
+.meal-tabs.segmented button.active {
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+  box-shadow: none !important;
+}
+
+/* ---- Macro cards (premium) ---- */
+.macro-card {
+  min-height: 0 !important;
+  padding: 14px !important;
+  justify-items: stretch !important;
+  gap: 9px !important;
+}
+.macro-card .macro-icon {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 9px !important;
+  justify-self: start !important;
+}
+.macro-card small {
+  width: 100%;
+  text-align: left;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+  color: var(--muted) !important;
+}
+.macro-card .macro-bar {
+  width: 100% !important;
+  height: 6px !important;
+  align-items: center !important;
+  background: rgba(20, 45, 32, 0.07) !important;
+  border-radius: 99px !important;
+}
+.macro-card .macro-bar span {
+  height: 100% !important;
+  min-height: 0 !important;
+  border-radius: 99px !important;
+}
+.macro-card strong {
+  width: 100%;
+  text-align: left;
+  font-size: 0.84rem !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+}
+.macro-grid .macro-card:nth-child(1) .macro-icon { background: #FBE3DC !important; color: #E2533B !important; }
+.macro-grid .macro-card:nth-child(2) .macro-icon { background: #DEEEFB !important; color: #2E8FE6 !important; }
+.macro-grid .macro-card:nth-child(3) .macro-icon { background: #FCEFD3 !important; color: #E9A521 !important; }
+
+/* ---- Progress stat cards ---- */
+.progress-mini-card { padding: 15px 8px !important; }
+.progress-mini-card::after { display: none !important; }
+.progress-mini-card b {
+  width: 30px !important;
+  height: 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 9px !important;
+  margin: 0 auto 2px !important;
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+}
+.progress-mini-grid .progress-mini-card:nth-child(2) b { background: #FBE3DC !important; color: #E2533B !important; }
+.progress-mini-grid .progress-mini-card:nth-child(3) b { background: #DEEEFB !important; color: #2E8FE6 !important; }
+
+/* ---- Meal rows ---- */
+.meal-row {
+  background: #fff !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 16px rgba(20, 45, 32, 0.04) !important;
+}
+.meal-row.meal-health { border-left-width: 3px !important; }
+.meal-row strong:last-child,
+.meal-row-side > strong { color: var(--green) !important; }
+.metric,
+.plan-item,
+.goal-item {
+  background: var(--card-2) !important;
+  border-radius: 14px !important;
+}
+
+/* ---- Chat ---- */
+.bubble {
+  background: #fff !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px 16px 16px 5px !important;
+  box-shadow: 0 5px 16px rgba(20, 45, 32, 0.05) !important;
+  font-weight: 500 !important;
+}
+.bubble.user {
+  background: var(--green) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 16px 16px 5px 16px !important;
+  font-weight: 600 !important;
+}
+.send-button {
+  background: var(--green) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 6px 16px rgba(21, 160, 106, 0.3) !important;
+}
+.chat-form input,
+.fridge-form input { border-radius: 999px !important; }
+
+/* ---- Chips ---- */
+.fridge-chip,
+.favorite-chip {
+  background: #F2F1EB !important;
+  color: var(--text) !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  font-weight: 700 !important;
+}
+[data-theme="dark"] .fridge-chip,
+[data-theme="dark"] .favorite-chip { background: var(--card-2) !important; }
+
+/* ---- Apple meter accent ---- */
+.apple-progress-line { stroke: var(--green) !important; }
+.apple-leaf { fill: var(--green) !important; }
+
+/* ---- Tab bar ---- */
+.tabbar {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(20, 45, 32, 0.12) !important;
+}
+.tab {
+  color: #b3bbb4 !important;
+  font-weight: 700 !important;
+  gap: 4px !important;
+}
+.tab span { display: grid !important; place-items: center !important; }
+.tab.active {
+  background: transparent !important;
+  color: var(--green) !important;
+}
+
+/* ---- Hydration / water ---- */
+.water-meter span { background: var(--blue) !important; }
+
+/* ---- Analysis pills ---- */
+.analysis-pills .pill { background: var(--card-2) !important; border-radius: 12px !important; }

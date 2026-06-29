@@ -6,13 +6,16 @@
   <meta name="theme-color" content="#f3f7f5">
   <title>NutriAI</title>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <section class="onboarding-screen" id="onboardingScreen">
     <div class="onboarding-card">
       <div class="onboarding-hero">
-        <span class="app-mark">🍊</span>
+        <span class="app-mark"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></span>
         <p class="eyebrow">NutriAI</p>
         <h1>Профил за хранителен план</h1>
         <p>Избери параметрите си и ще създадем дневни калории, макроси, вода и начална цел.</p>
@@ -26,11 +29,11 @@
         </div>
         <input id="gender" type="hidden" value="Жена">
 
-        <label><span class="field-icon">🎂</span> Възраст <input id="age" type="number" min="13" max="100" value="30"></label>
-        <label><span class="field-icon">📏</span> Височина, см <input id="height" type="number" min="100" max="230" value="170"></label>
-        <label><span class="field-icon">⚖</span> Тегло, кг <input id="weight" type="number" min="30" max="250" step="0.1" value="70"></label>
-        <label><span class="field-icon">🎯</span> Целево тегло, кг <input id="targetWeight" type="number" min="30" max="250" step="0.1" value="65"></label>
-        <label><span class="field-icon">🏃</span> Активност
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg></span> Възраст <input id="age" type="number" min="13" max="100" value="30"></label>
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M8 6l4-3 4 3M8 18l4 3 4-3"/></svg></span> Височина, см <input id="height" type="number" min="100" max="230" value="170"></label>
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7h11l2 13H4.5z"/><circle cx="12" cy="4.5" r="2"/></svg></span> Тегло, кг <input id="weight" type="number" min="30" max="250" step="0.1" value="70"></label>
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span> Целево тегло, кг <input id="targetWeight" type="number" min="30" max="250" step="0.1" value="65"></label>
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span> Активност
           <select id="activity">
             <option value="1.2">Заседнал</option>
             <option value="1.375">Лека</option>
@@ -39,14 +42,14 @@
             <option value="1.9">Екстремна</option>
           </select>
         </label>
-        <label><span class="field-icon">🔥</span> Цел
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span> Цел
           <select id="goal">
             <option>Отслабване</option>
             <option>Поддържане</option>
             <option>Покачване</option>
           </select>
         </label>
-        <label><span class="field-icon">🍽</span> Дневен лимит, kcal <input id="dailyLimit" type="number" min="1200" max="6000" step="50" value="1800"></label>
+        <label><span class="field-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg></span> Дневен лимит, kcal <input id="dailyLimit" type="number" min="1200" max="6000" step="50" value="1800"></label>
         <button class="primary setup-button" type="submit">✨ Създай хранителен план</button>
       </form>
 
@@ -109,7 +112,7 @@
 
         <article class="ios-card hydration-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">💧</span> Хидратация</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></span> Хидратация</h2>
             <span id="waterStatus">0 / 0 мл</span>
           </div>
           <div class="water-meter"><span id="waterMeter"></span></div>
@@ -121,7 +124,7 @@
 
         <details class="ios-card dashboard-collapsible" open>
           <summary class="card-title-row collapsible-summary">
-            <h2><span class="title-icon">🍽</span> Днешни хранения</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v6a2 2 0 0 0 4 0V3"/><path d="M16 3c-1.6 0-2.5 2-2.5 5s1 4 2.5 4v9"/></svg></span> Днешни хранения</h2>
             <span class="collapsible-chevron">⌄</span>
           </summary>
           <div class="collapsible-content">
@@ -132,7 +135,7 @@
 
         <article class="ios-card favorites-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">♥</span> Любими храни</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5.5a4 4 0 0 0-6.5-1.3L12 4.7l-.5-.5A4 4 0 0 0 5 5.5C3.5 7 3.6 9.6 7 13l5 5 5-5c3.4-3.4 3.5-6 2-7.5z"/></svg></span> Любими храни</h2>
             <button class="text-button" type="button" data-jump="camera">＋ Нова</button>
           </div>
           <p class="card-helper">Добавете често използвана храна към днешните калории с едно докосване.</p>
@@ -142,7 +145,7 @@
 
         <details class="ios-card dashboard-collapsible" open>
           <summary class="card-title-row collapsible-summary">
-            <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.5l-4.1 3.2L16 18l-4-2.8L8 18l1.1-5.3L5 9.5l5.1-1.7z"/></svg></span> AI хранителен режим</h2>
             <span class="collapsible-chevron">⌄</span>
           </summary>
           <div class="collapsible-content">
@@ -153,7 +156,7 @@
 
         <article class="ios-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">🎯</span> Примерни цели</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span> Примерни цели</h2>
           </div>
           <div id="goalSuggestions" class="goal-list"></div>
         </article>
@@ -167,7 +170,7 @@
             <input id="foodImage" type="file" accept="image/*" capture="environment">
             <label class="photo-capture-area" for="foodImage">
               <img id="preview" alt="Преглед на снимката">
-              <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
+              <span id="photoPlaceholder"><span class="big-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg></span><br>Направете снимка или изберете от галерия</span>
             </label>
             <div id="foodScanOverlay" class="food-scan-overlay hidden" aria-live="polite"></div>
           </div>
@@ -241,7 +244,7 @@
 
         <article class="ios-card hidden" id="analysisPanel">
           <div class="card-title-row">
-            <h2><span class="title-icon">✨</span> Резултат</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.5l-4.1 3.2L16 18l-4-2.8L8 18l1.1-5.3L5 9.5l5.1-1.7z"/></svg></span> Резултат</h2>
             <strong id="analysisCalories"></strong>
           </div>
           <div id="analysisSummary"></div>
@@ -263,7 +266,7 @@
 
       <section class="view" id="view-history" data-title="История">
         <article class="ios-card">
-          <h2><span class="title-icon">🧾</span> История на храненията</h2>
+          <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg></span> История на храненията</h2>
           <div class="history-toolbar">
             <label>Ден<input id="historyDate" type="date"></label>
             <button id="showAllHistory" class="secondary" type="button">Всички</button>
@@ -282,7 +285,7 @@
         <div class="progress-mini-grid" id="progressCards"></div>
         <article class="ios-card week-progress-card">
           <div class="card-title-row week-progress-head">
-            <div><h2><span class="title-icon">◷</span> Седмичен прогрес</h2><span id="weekProgressRange"></span></div>
+            <div><h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span> Седмичен прогрес</h2><span id="weekProgressRange"></span></div>
             <div class="week-nav">
               <button id="previousWeek" class="icon-action" type="button" aria-label="Предишна седмица">‹</button>
               <button id="currentWeek" class="secondary" type="button">Тази седмица</button>
@@ -294,20 +297,20 @@
         </article>
         <article class="ios-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">📈</span> История на теглото</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span> История на теглото</h2>
             <span id="weightGoalLabel"></span>
           </div>
           <canvas id="weightChart" width="700" height="300"></canvas>
         </article>
         <article class="ios-card">
-          <h2><span class="title-icon">⚖</span> Въведи тегло за днес</h2>
+          <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7h11l2 13H4.5z"/><circle cx="12" cy="4.5" r="2"/></svg></span> Въведи тегло за днес</h2>
           <form id="weightForm" class="inline-form">
             <input id="weightEntry" type="number" min="30" max="250" step="0.1" placeholder="74.5">
             <button class="primary" type="submit">Запиши</button>
           </form>
         </article>
               <article class="ios-card reminder-card">
-          <h2><span class="title-icon">💧</span> Напомняне за вода</h2>
+          <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></span> Напомняне за вода</h2>
           <div class="reminder-list water-only-reminder">
             <label><input id="reminderWater" type="checkbox"> Напомняй ми през
               <select id="waterInterval">
@@ -325,7 +328,7 @@
       <section class="view" id="view-chat" data-title="AI Диетолог">
         <article class="ios-card fridge-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">❄</span> Хладилник</h2>
+            <h2><span class="title-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M6 10h12M10 6h0M10 14h0"/></svg></span> Хладилник</h2>
             <button id="clearFridge" class="text-button" type="button">Изчисти</button>
           </div>
           <form id="fridgeForm" class="inline-form fridge-form">
@@ -341,7 +344,7 @@
           <div id="chatMessages" class="chat-messages"></div>
           <form id="chatForm" class="chat-form">
             <input id="chatInput" type="text" placeholder="Питайте ме за диета, рецепти...">
-            <button class="send-button" type="submit" aria-label="Изпрати">➤</button>
+            <button class="send-button" type="submit" aria-label="Изпрати"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
           </form>
         </article>
               
@@ -396,11 +399,11 @@
     </dialog>
 
     <nav class="tabbar" aria-label="Основна навигация">
-      <button class="tab active" data-view="dashboard"><span>🏠</span>Днес</button>
-      <button class="tab" data-view="camera"><span>📷</span>Камера</button>
-      <button class="tab" data-view="progress"><span>📈</span>Прогрес</button>
-      <button class="tab" data-view="history"><span>🧾</span>История</button>
-      <button class="tab" data-view="chat"><span>💬</span>AI</button>
+      <button class="tab active" data-view="dashboard"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>Днес</button>
+      <button class="tab" data-view="camera"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg></span>Камера</button>
+      <button class="tab" data-view="progress"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span>Прогрес</button>
+      <button class="tab" data-view="history"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>История</button>
+      <button class="tab" data-view="chat"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 17 0z"/></svg></span>AI</button>
     </nav>
   </div>
 

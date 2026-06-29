@@ -462,9 +462,9 @@ function renderDashboard() {
   $("calorieRing").classList.toggle("limit-reached", consumed >= limit);
 
   $("macroBars").innerHTML = [
-    macroCard("💪", "Протеин", totals.protein, targets.protein, "var(--orange)"),
-    macroCard("🌾", "Въгл.", totals.carbs, targets.carbs, "var(--blue)"),
-    macroCard("🥑", "Мазнини", totals.fat, targets.fat, "var(--yellow)")
+    macroCard('<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12"/></svg>', "Протеин", totals.protein, targets.protein, "var(--orange)"),
+    macroCard('<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>', "Въгл.", totals.carbs, targets.carbs, "var(--blue)"),
+    macroCard('<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>', "Мазнини", totals.fat, targets.fat, "var(--yellow)")
   ].join("");
 
   const waterPercent = Math.min(state.water.amount / targets.water, 1);
@@ -684,7 +684,7 @@ function macroCard(icon, title, current, target, color) {
   const percent = Math.min(Number(current || 0) / Math.max(Number(target || 1), 1), 1);
   return `
     <div class="macro-card">
-      <span class="macro-icon">${escapeHtml(icon)}</span>
+      <span class="macro-icon">${icon}</span>
       <small>${escapeHtml(title)}</small>
       <div class="macro-bar"><span style="width:${percent * 100}%;background:${color}"></span></div>
       <strong>${Math.round(current || 0)} / ${Math.round(target || 0)}g</strong>
@@ -742,16 +742,16 @@ function renderTodayMeals() {
 function renderProgressCards(targets) {
   const bmiCategory = getBMICategory(targets.bmi);
   $("progressCards").innerHTML = [
-    progressCard("🧭", "BMI Индекс", targets.bmi, bmiCategory, getBMIColor(targets.bmi)),
-    progressCard("🔥", "BMR", targets.bmr, "kcal / ден", "var(--orange)"),
-    progressCard("⚡", "TDEE", targets.tdee, "kcal / ден", "var(--blue)")
+    progressCard('<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a8 8 0 0 1 16 0"/><path d="M12 14l4-3"/><circle cx="12" cy="14" r="1.6"/></svg>', "BMI Индекс", targets.bmi, bmiCategory, getBMIColor(targets.bmi)),
+    progressCard('<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>', "BMR", targets.bmr, "kcal / ден", "var(--orange)"),
+    progressCard('<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>', "TDEE", targets.tdee, "kcal / ден", "var(--blue)")
   ].join("");
   $("weightGoalLabel").textContent = `Цел: ${state.profile.targetWeight} кг`;
   renderWeekProgress();
 }
 
 function progressCard(icon, title, value, desc, color) {
-  return `<div class="progress-mini-card"><b>${escapeHtml(icon)}</b><small>${escapeHtml(title)}</small><strong style="color:${color}">${escapeHtml(value)}</strong><span>${escapeHtml(desc)}</span></div>`;
+  return `<div class="progress-mini-card"><b>${icon}</b><small>${escapeHtml(title)}</small><strong style="color:${color}">${escapeHtml(value)}</strong><span>${escapeHtml(desc)}</span></div>`;
 }
 
 function getBMICategory(bmi) {
