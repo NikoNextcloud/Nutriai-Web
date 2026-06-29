@@ -447,7 +447,9 @@ function renderDashboard() {
   const recommended = state.profile.recommendedCalories || targets.recommendedCalories;
   const limit = state.profile.dailyLimit || recommended;
   const remaining = Math.round(limit - consumed);
-  const percent = Math.min(Math.max(consumed / limit, 0), 1);
+  const calorieRatio = Math.max(consumed / Math.max(limit, 1), 0);
+  const percent = Math.min(calorieRatio, 1);
+  updateCalorieBackground(calorieRatio);
   $("recommendedCalories").textContent = `Преп. ${recommended} kcal`;
   $("remainingCalories").textContent = `${limit}`;
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
@@ -486,6 +488,17 @@ function renderDashboard() {
   renderGoalSuggestions(targets);
   renderTodayMeals();
   renderProgressCards(targets);
+}
+
+function updateCalorieBackground(ratio) {
+  const zone = ratio >= 1
+    ? "red"
+    : ratio >= 0.8
+      ? "orange"
+      : ratio >= 0.5
+        ? "yellow"
+        : "green";
+  document.documentElement.dataset.calorieZone = zone;
 }
 
 async function generateAIPlan(force = false) {

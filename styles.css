@@ -13,7 +13,15 @@
   --yellow: #f5bc22;
   --red: #e84545;
   --shadow: 0 16px 38px rgba(20, 20, 30, 0.08);
+  --calorie-rgb: 38, 184, 109;
+  --calorie-wash-top: 0.11;
+  --calorie-wash-bottom: 0.045;
 }
+
+[data-calorie-zone="green"] { --calorie-rgb: 38, 184, 109; }
+[data-calorie-zone="yellow"] { --calorie-rgb: 245, 188, 34; }
+[data-calorie-zone="orange"] { --calorie-rgb: 255, 138, 31; }
+[data-calorie-zone="red"] { --calorie-rgb: 232, 69, 69; }
 
 [data-theme="dark"] {
   --bg: #101014;
@@ -23,6 +31,8 @@
   --muted: #9b9ba4;
   --line: rgba(255, 255, 255, 0.09);
   --shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  --calorie-wash-top: 0.13;
+  --calorie-wash-bottom: 0.055;
 }
 
 * { box-sizing: border-box; }
@@ -35,9 +45,15 @@ html, body {
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top, rgba(255, 138, 31, 0.14), transparent 340px),
+    linear-gradient(
+      180deg,
+      rgba(var(--calorie-rgb), var(--calorie-wash-top)),
+      rgba(var(--calorie-rgb), var(--calorie-wash-bottom)) 58%,
+      rgba(var(--calorie-rgb), 0.025)
+    ),
     var(--bg);
   color: var(--text);
+  transition: background-color 420ms ease;
 }
 
 .hidden { display: none !important; }
@@ -944,7 +960,12 @@ canvas {
 @media (min-width: 620px) {
   body {
     background:
-      linear-gradient(135deg, rgba(255, 138, 31, 0.16), transparent 38%),
+      linear-gradient(
+        135deg,
+        rgba(var(--calorie-rgb), var(--calorie-wash-top)),
+        rgba(var(--calorie-rgb), var(--calorie-wash-bottom)) 48%,
+        rgba(var(--calorie-rgb), 0.02)
+      ),
       var(--bg);
   }
 
@@ -953,8 +974,15 @@ canvas {
     margin-bottom: 18px;
     border: 1px solid var(--line);
     border-radius: 30px;
-    background: var(--bg);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(var(--calorie-rgb), 0.055),
+        rgba(var(--calorie-rgb), 0.018)
+      ),
+      var(--bg);
     box-shadow: 0 26px 80px rgba(0, 0, 0, 0.16);
+    transition: background-color 420ms ease;
   }
 }
 
