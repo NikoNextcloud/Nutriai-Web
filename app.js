@@ -1284,6 +1284,7 @@ function escapeHtml(value) {
 
 function bindEnhancedFeatures() {
   $("mealHistory")?.addEventListener("click", handleMealHistoryAction);
+  $("todayMeals")?.addEventListener("click", handleMealHistoryAction);
   $("mealEditForm")?.addEventListener("submit", saveMealEdit);
   $("cancelMealEdit")?.addEventListener("click", () => $("mealEditor").close());
 
