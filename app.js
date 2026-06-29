@@ -1448,7 +1448,29 @@ async function handleDashboardFavorite(event) {
 async function addFavoriteToToday(id, button) {
   const item = state.favorites.find((favorite) => favorite.id === id);
   if (!item) return;
-  const nutrition = favoritePortionNutrition(item);
+  button.disabled = true;
+  let nutrition = favoritePortionNutrition(item);
+  let estimatedByAI = false;
+  if (!hasMacroNutrition(nutrition)) {
+    $("favoriteQuickStatus").textContent = `Допълвам хранителните стойности за ${item.name}...`;
+    try {
+      nutrition = await estimateFavoriteNutrition(item, nutrition);
+      estimatedByAI = true;
+      item.grams = nutrition.grams || item.grams;
+      item.portionNutrition = {
+        calories: nutrition.calories,
+        protein: nutrition.protein,
+        carbs: nutrition.carbs,
+        fat: nutrition.fat,
+        fiber: nutrition.fiber
+      };
+      await save("nutriai.favorites", state.favorites);
+    } catch (error) {
+      $("favoriteQuickStatus").textContent = "Липсват протеин, въглехидрати и мазнини. Отворете „Нова“ и попълнете стойностите или изберете продукт от световната база.";
+      button.disabled = false;
+      return;
+    }
+  }
   const meal = {
     id: crypto.randomUUID(),
     date: new Date().toISOString(),
@@ -1462,7 +1484,7 @@ async function addFavoriteToToday(id, button) {
       carbs: nutrition.carbs,
       fat: nutrition.fat,
       fiber: nutrition.fiber,
-      rating: "Добавено от любими",
+      rating: estimatedByAI ? "Ориентировъчна AI оценка" : "Добавено от любими",
       foods: [{
         name: item.name,
         grams: nutrition.grams,
@@ -1472,22 +1494,60 @@ async function addFavoriteToToday(id, button) {
         fat: nutrition.fat,
         fiber: nutrition.fiber
       }],
-      reason: "Запазена любима храна."
+      reason: estimatedByAI
+        ? "Липсващите хранителни стойности са попълнени ориентировъчно от AI."
+        : "Запазена любима храна."
     }
   };
-  button.disabled = true;
   state.meals.unshift(meal);
   try {
     await save("nutriai.meals", state.meals);
     renderAll();
     renderFavorites();
-    $("favoriteQuickStatus").textContent = `${item.name} е добавена към днешните калории.`;
+    $("favoriteQuickStatus").textContent = estimatedByAI
+      ? `${item.name} е добавена. Макронутриентите са ориентировъчна AI оценка.`
+      : `${item.name} е добавена към днешните калории.`;
   } catch (error) {
     state.meals = state.meals.filter((savedMeal) => savedMeal.id !== meal.id);
     $("favoriteQuickStatus").textContent = "Храната не можа да бъде добавена. Опитайте отново.";
   } finally {
     button.disabled = false;
   }
+}
+
+function hasMacroNutrition(nutrition) {
+  return nutritionNumber(nutrition?.protein) > 0
+    || nutritionNumber(nutrition?.carbs) > 0
+    || nutritionNumber(nutrition?.fat) > 0
+    || nutritionNumber(nutrition?.fiber) > 0;
+}
+
+async function estimateFavoriteNutrition(item, currentNutrition) {
+  const grams = nutritionNumber(currentNutrition?.grams) || nutritionNumber(item.grams) || 100;
+  const statedCalories = nutritionNumber(currentNutrition?.calories) || nutritionNumber(item.calories);
+  const data = await callGroq([
+    {
+      role: "system",
+      content: "Ти си нутриционист. Връщай само валиден JSON. Оценките трябва да са реалистични, но ясно ориентировъчни."
+    },
+    {
+      role: "user",
+      content: `Оцени хранителните стойности за цялата порция: храна „${item.name}", количество ${grams} г, записани калории ${statedCalories || "неизвестни"}. Ако записаните калории са очевидно несъвместими с храната и порцията, използвай по-реалистична ориентировъчна стойност. Върни точно: {"calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0}`
+    }
+  ], true);
+  const result = parseGroqJsonLoose(data);
+  const nutrition = {
+    grams,
+    calories: Math.round(nutritionNumber(result.calories ?? result.totalCalories)),
+    protein: round(nutritionNumber(result.protein ?? result.proteins), 1),
+    carbs: round(nutritionNumber(result.carbs ?? result.carbohydrates), 1),
+    fat: round(nutritionNumber(result.fat ?? result.fats), 1),
+    fiber: round(nutritionNumber(result.fiber ?? result.fibre), 1)
+  };
+  if (!nutrition.calories || !hasMacroNutrition(nutrition)) {
+    throw new Error("AI не върна достатъчно хранителни стойности.");
+  }
+  return nutrition;
 }
 
 async function deleteFavorite(id) {
