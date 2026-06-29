@@ -456,7 +456,7 @@ function renderDashboard() {
   $("targetCalories").textContent = `${Math.abs(remaining)}`;
   $("targetCaloriesLabel").textContent = remaining < 0 ? "Превишени" : "Оставащи";
   const appleProgress = $("appleProgress");
-  const appleColor = percent >= 1 ? "var(--red)" : percent >= 0.8 ? "var(--orange)" : percent >= 0.5 ? "var(--yellow)" : "var(--green)";
+  const appleColor = percent >= 1 ? "var(--red)" : percent >= 0.7 ? "var(--orange)" : "var(--green)";
   appleProgress.style.stroke = appleColor;
   appleProgress.style.strokeDasharray = `${Math.round(percent * 100)} 100`;
   $("calorieRing").classList.toggle("limit-reached", consumed >= limit);
