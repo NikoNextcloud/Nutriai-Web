@@ -386,6 +386,26 @@
       </div>
     </div>
 
+
+    <dialog id="favoriteEditor" class="meal-editor favorite-editor">
+      <form id="favoriteEditForm">
+        <div class="favorite-editor-heading">
+          <img id="editFavoriteImage" class="favorite-editor-image hidden" alt="Снимка на любимия продукт">
+          <div><small>Любима храна</small><h2>Коригиране на продукт</h2></div>
+        </div>
+        <input id="editFavoriteId" type="hidden">
+        <label>Име<input id="editFavoriteName" type="text" required></label>
+        <label>Количество, г<input id="editFavoriteGrams" type="number" min="0" step="0.1"></label>
+        <label>Калории<input id="editFavoriteCalories" type="number" min="0" required></label>
+        <label>Протеин, г<input id="editFavoriteProtein" type="number" min="0" step="0.1"></label>
+        <label>Въглехидрати, г<input id="editFavoriteCarbs" type="number" min="0" step="0.1"></label>
+        <label>Мазнини, г<input id="editFavoriteFat" type="number" min="0" step="0.1"></label>
+        <label>Фибри, г<input id="editFavoriteFiber" type="number" min="0" step="0.1"></label>
+        <p class="favorite-image-note">Снимката се запазва автоматично при корекция.</p>
+        <div class="split-actions"><button id="cancelFavoriteEdit" class="secondary" type="button">Отказ</button><button class="primary" type="submit">Запази</button></div>
+      </form>
+    </dialog>
+
     <dialog id="mealEditor" class="meal-editor">
       <form id="mealEditForm">
         <h2>Редактиране на хранене</h2>

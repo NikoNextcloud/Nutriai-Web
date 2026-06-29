@@ -1311,6 +1311,8 @@ function bindEnhancedFeatures() {
   $("todayMeals")?.addEventListener("click", handleMealHistoryAction);
   $("mealEditForm")?.addEventListener("submit", saveMealEdit);
   $("cancelMealEdit")?.addEventListener("click", () => $("mealEditor").close());
+  $("favoriteEditForm")?.addEventListener("submit", saveFavoriteEdit);
+  $("cancelFavoriteEdit")?.addEventListener("click", () => $("favoriteEditor").close());
 
   $("historyDate")?.addEventListener("change", (event) => {
     state.historyDate = event.target.value;
@@ -1394,7 +1396,7 @@ async function addCurrentFavorite(name, grams, portionNutrition) {
     }
   };
   const existing = state.favorites.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
-  if (existing >= 0) state.favorites[existing] = { ...favorite, id: state.favorites[existing].id };
+  if (existing >= 0) state.favorites[existing] = { ...favorite, id: state.favorites[existing].id, image: favorite.image || state.favorites[existing].image || "" };
   else state.favorites.unshift(favorite);
   await save("nutriai.favorites", state.favorites);
   renderFavorites();
@@ -1412,12 +1414,14 @@ function renderFavorites() {
     const portion = item.per100 ? `${item.grams || 100} г` : (item.grams ? `${item.grams} г` : "1 порция");
     return `
       <div class="dashboard-favorite-row">
+        ${favoriteImageHtml(item)}
         <div class="favorite-food-main">
           <strong>${escapeHtml(item.name)}</strong>
           <span>${escapeHtml(portion)} · ${nutrition.calories} kcal</span>
           <div class="favorite-macro-line"><b>П ${round(nutrition.protein, 1)} г</b><b>В ${round(nutrition.carbs, 1)} г</b><b>М ${round(nutrition.fat, 1)} г</b></div>
         </div>
         <button type="button" class="favorite-add-button" data-add-favorite="${escapeHtml(item.id)}" title="Добави към днешните калории">＋ Добави</button>
+        <button type="button" class="icon-action" data-edit-favorite="${escapeHtml(item.id)}" title="Коригирай любимата храна" aria-label="Коригирай любимата храна">✎</button>
         <button type="button" class="icon-action danger" data-delete-favorite="${escapeHtml(item.id)}" title="Премахни от любими" aria-label="Премахни от любими">×</button>
       </div>`;
   }).join("");
@@ -1466,8 +1470,10 @@ function favoritePortionNutrition(item) {
 
 async function handleDashboardFavorite(event) {
   const addId = event.target.dataset.addFavorite;
+  const editId = event.target.dataset.editFavorite;
   const deleteId = event.target.dataset.deleteFavorite;
   if (addId) await addFavoriteToToday(addId, event.target);
+  if (editId) openFavoriteEditor(editId);
   if (deleteId) await deleteFavorite(deleteId);
 }
 
@@ -1502,7 +1508,7 @@ async function addFavoriteToToday(id, button) {
     date: new Date().toISOString(),
     title: item.name,
     mealType: mealTypeForTime(new Date()),
-    image: "",
+    image: item.image || "",
     quantityGrams: nutrition.grams,
     analysis: {
       totalCalories: nutrition.calories,
@@ -2234,7 +2240,7 @@ function mealFromDetectedFood(food) {
     date: new Date().toISOString(),
     title: food.name || "Храна",
     mealType: $("mealType").value,
-    image: "",
+    image: state.selectedImageDataUrl || "",
     quantityGrams: nutritionNumber(food.estimatedGrams ?? food.grams),
     analysis: {
       foods: [structuredClone(food)],
@@ -2372,6 +2378,7 @@ function favoriteFromMeal(meal) {
     carbs: nutrition.carbs,
     fat: nutrition.fat,
     fiber: nutrition.fiber,
+    image: meal.image || "",
     portionNutrition: {
       calories,
       protein: nutrition.protein,
@@ -2386,7 +2393,7 @@ async function setMealFavorite(meal, shouldSave) {
   const existing = findFavoriteByName(meal.title);
   if (shouldSave) {
     const next = favoriteFromMeal(meal);
-    if (existing) state.favorites[state.favorites.indexOf(existing)] = { ...next, id: existing.id };
+    if (existing) state.favorites[state.favorites.indexOf(existing)] = { ...next, id: existing.id, image: next.image || existing.image || "" };
     else state.favorites.unshift(next);
   } else if (existing) {
     state.favorites = state.favorites.filter((favorite) => favorite.id !== existing.id);
@@ -2423,7 +2430,7 @@ function analysisAsMeal() {
     date: new Date().toISOString(),
     title,
     mealType: $("mealType").value,
-    image: "",
+    image: state.selectedImageDataUrl || "",
     quantityGrams: foods.reduce((sum, food) => sum + nutritionNumber(food.estimatedGrams ?? food.grams), 0),
     analysis: structuredClone(analysis)
   };
@@ -2462,4 +2469,59 @@ async function toggleMealFavorite(mealId) {
   $("favoriteQuickStatus").textContent = existing
     ? meal.title + " е премахнато от любими."
     : meal.title + " е запазено в любими.";
+}
+
+
+function favoriteImageHtml(item) {
+  if (item.image && String(item.image).startsWith("data:image/")) {
+    return '<img class="favorite-food-image" src="' + item.image + '" alt="Снимка на ' + escapeHtml(item.name) + '">';
+  }
+  return '<div class="favorite-food-image favorite-food-placeholder" aria-hidden="true">🍽</div>';
+}
+
+function openFavoriteEditor(id) {
+  const item = state.favorites.find((favorite) => favorite.id === id);
+  if (!item) return;
+  const nutrition = favoritePortionNutrition(item);
+  $("editFavoriteId").value = item.id;
+  $("editFavoriteName").value = item.name || "";
+  $("editFavoriteGrams").value = nutrition.grams || item.grams || "";
+  $("editFavoriteCalories").value = nutrition.calories || 0;
+  $("editFavoriteProtein").value = nutrition.protein || 0;
+  $("editFavoriteCarbs").value = nutrition.carbs || 0;
+  $("editFavoriteFat").value = nutrition.fat || 0;
+  $("editFavoriteFiber").value = nutrition.fiber || 0;
+  const image = $("editFavoriteImage");
+  if (item.image && String(item.image).startsWith("data:image/")) {
+    image.src = item.image;
+    image.classList.remove("hidden");
+  } else {
+    image.removeAttribute("src");
+    image.classList.add("hidden");
+  }
+  $("favoriteEditor").showModal();
+}
+
+async function saveFavoriteEdit(event) {
+  event.preventDefault();
+  const item = state.favorites.find((favorite) => favorite.id === $("editFavoriteId").value);
+  if (!item) return;
+  const nutrition = {
+    calories: Math.max(0, Number($("editFavoriteCalories").value) || 0),
+    protein: Math.max(0, Number($("editFavoriteProtein").value) || 0),
+    carbs: Math.max(0, Number($("editFavoriteCarbs").value) || 0),
+    fat: Math.max(0, Number($("editFavoriteFat").value) || 0),
+    fiber: Math.max(0, Number($("editFavoriteFiber").value) || 0)
+  };
+  item.name = $("editFavoriteName").value.trim() || item.name;
+  item.grams = Math.max(0, Number($("editFavoriteGrams").value) || 0);
+  item.per100 = false;
+  Object.assign(item, nutrition);
+  item.portionNutrition = { ...nutrition };
+  await save("nutriai.favorites", state.favorites);
+  $("favoriteEditor").close();
+  renderFavorites();
+  renderTodayMeals();
+  renderHistory();
+  $("favoriteQuickStatus").textContent = item.name + " е коригирано. Снимката е запазена.";
 }
