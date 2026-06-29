@@ -18,6 +18,41 @@
   --calorie-wash-bottom: 0.045;
 }
 
+/* Keep the calorie tint above the later visual-theme background overrides. */
+body {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--calorie-rgb), 0.14),
+      rgba(var(--calorie-rgb), 0.075) 55%,
+      rgba(var(--calorie-rgb), 0.045)
+    ),
+    var(--bg) !important;
+  background-attachment: fixed !important;
+}
+
+.phone-app {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--calorie-rgb), 0.09),
+      rgba(var(--calorie-rgb), 0.045)
+    ),
+    var(--bg) !important;
+  transition: background 420ms ease;
+}
+
+[data-theme="dark"] body {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--calorie-rgb), 0.18),
+      rgba(var(--calorie-rgb), 0.09) 55%,
+      rgba(var(--calorie-rgb), 0.05)
+    ),
+    var(--bg) !important;
+}
+
 [data-calorie-zone="green"] { --calorie-rgb: 38, 184, 109; }
 [data-calorie-zone="yellow"] { --calorie-rgb: 245, 188, 34; }
 [data-calorie-zone="orange"] { --calorie-rgb: 255, 138, 31; }
