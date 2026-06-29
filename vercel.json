@@ -4,6 +4,10 @@
     {
       "source": "/api/groq",
       "destination": "/api/groq.js"
+    },
+    {
+      "source": "/api/foods",
+      "destination": "/api/foods.js"
     }
   ]
 }
