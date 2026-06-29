@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f5f2">
+  <meta name="theme-color" content="#f3f7f5">
   <title>NutriAI</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
@@ -50,7 +50,12 @@
         <button class="primary setup-button" type="submit">✨ Създай хранителен план</button>
       </form>
 
+      <div class="setup-estimate-head">
+        <strong>Твоите ориентировъчни стойности</strong>
+        <span id="setupEstimateSummary"></span>
+      </div>
       <div class="metrics" id="metrics"></div>
+      <p class="setup-estimate-note">Изчисленията са по формулата Mifflin–St Jeor и стандартен коефициент за активност. Те са ориентировъчни, а не медицинска препоръка.</p>
       <div id="nutritionPlan" class="plan-list"></div>
     </div>
   </section>
@@ -60,6 +65,7 @@
       <div>
         <p class="eyebrow">Вашият AI диетолог</p>
         <h1 id="screenTitle">Днес</h1>
+        <p id="currentDate" class="current-date"></p>
       </div>
       <button class="round-button" id="themeToggle" title="Смени тема" aria-label="Смени тема">◐</button>
     </header>
@@ -67,12 +73,23 @@
     <main class="screen-stack">
       <section class="view active" id="view-dashboard" data-title="Днес">
         <article class="calorie-card">
-          <div class="ring-wrap">
-            <div class="ring" id="calorieRing">
-              <div class="ring-core">
-                <strong id="remainingCalories">0</strong>
-                <span>оставащи<br>калории</span>
-              </div>
+          <div class="apple-meter" id="calorieRing">
+            <svg class="apple-progress-svg" viewBox="0 0 220 210" aria-hidden="true">
+              <defs>
+                <clipPath id="appleFillClip">
+                  <path d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+                </clipPath>
+              </defs>
+              <path class="apple-background" d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+              <path class="apple-outline" d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+              <path id="appleProgress" class="apple-progress-line" pathLength="100" d="M110 54 C82 29 40 38 26 80 C10 128 38 184 81 185 C95 185 103 177 110 177 C117 177 125 185 139 185 C182 184 210 128 194 80 C180 38 138 29 110 54 Z"></path>
+              <path class="apple-stem" d="M109 55 C104 38 108 25 119 15"></path>
+              <path class="apple-leaf" d="M119 19 C139 8 154 14 160 29 C142 34 128 31 119 19 Z"></path>
+            </svg>
+            <div class="apple-core">
+              <small id="recommendedCalories" class="recommended-calories"></small>
+              <strong id="remainingCalories">0</strong>
+              <span>дневен<br>лимит</span>
             </div>
           </div>
           <div class="calorie-stats">
@@ -83,7 +100,7 @@
             <i></i>
             <div>
               <strong id="targetCalories">0</strong>
-              <span>Цел</span>
+              <span id="targetCaloriesLabel">Оставащи</span>
             </div>
           </div>
         </article>
@@ -102,30 +119,58 @@
           </div>
         </article>
 
-        <article class="ios-card">
-          <div class="card-title-row">
+        <details class="ios-card dashboard-collapsible" open>
+          <summary class="card-title-row collapsible-summary">
             <h2><span class="title-icon">🍽</span> Днешни хранения</h2>
-            <button class="text-button" data-jump="camera">＋ Добави</button>
+            <span class="collapsible-chevron">⌄</span>
+          </summary>
+          <div class="collapsible-content">
+            <button class="text-button collapsible-action" data-jump="camera">＋ Добави</button>
+            <div id="todayMeals" class="today-list"></div>
           </div>
-          <div id="todayMeals" class="today-list"></div>
+        </details>
+
+        <article class="ios-card favorites-card">
+          <div class="card-title-row">
+            <h2><span class="title-icon">♥</span> Любими храни</h2>
+            <button class="text-button" type="button" data-jump="camera">＋ Нова</button>
+          </div>
+          <p class="card-helper">Добавете често използвана храна към днешните калории с едно докосване.</p>
+          <div id="dashboardFavorites" class="dashboard-favorites"></div>
+          <p id="favoriteQuickStatus" class="status-line" aria-live="polite"></p>
         </article>
+
+        <details class="ios-card dashboard-collapsible" open>
+          <summary class="card-title-row collapsible-summary">
+            <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
+            <span class="collapsible-chevron">⌄</span>
+          </summary>
+          <div class="collapsible-content">
+            <button class="text-button collapsible-action" id="refreshPlan">↻ Нов</button>
+            <div id="aiMealPlan" class="plan-list"></div>
+          </div>
+        </details>
 
         <article class="ios-card">
           <div class="card-title-row">
-            <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
-            <button class="text-button" id="refreshPlan">↻ Нов</button>
+            <h2><span class="title-icon">🎯</span> Примерни цели</h2>
           </div>
-          <div id="aiMealPlan" class="plan-list"></div>
+          <div id="goalSuggestions" class="goal-list"></div>
         </article>
+
+        <button id="editProfileButton" class="secondary wide dashboard-edit">Промени</button>
       </section>
 
       <section class="view" id="view-camera" data-title="Камера за храна">
         <article class="photo-card">
-          <label class="photo-frame" for="foodImage">
+          <div class="photo-frame" id="photoFrame">
             <input id="foodImage" type="file" accept="image/*" capture="environment">
-            <img id="preview" alt="Преглед на снимката">
-            <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
-          </label>
+            <label class="photo-capture-area" for="foodImage">
+              <img id="preview" alt="Преглед на снимката">
+              <span id="photoPlaceholder"><span class="big-icon">📷</span><br>Направете снимка или изберете от галерия</span>
+            </label>
+            <div id="foodScanOverlay" class="food-scan-overlay hidden" aria-live="polite"></div>
+          </div>
 
           <div class="segmented meal-tabs">
             <button type="button" class="active" data-meal="breakfast">Закуска</button>
@@ -135,9 +180,65 @@
           </div>
           <input id="mealType" type="hidden" value="lunch">
 
-          <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
+          <div class="camera-analysis-actions">
+            <button id="analyzeButton" class="primary wide">Анализирай с изкуствен интелект</button>
+            <button id="clearAnalysis" class="secondary wide hidden" type="button">Изчисти</button>
+          </div>
           <p id="analysisStatus" class="status-line"></p>
         </article>
+
+
+        <details class="ios-card manual-meal-card">
+          <summary class="manual-meal-summary"><span><span class="title-icon">＋</span> Ръчно добавяне</span><span class="manual-chevron">⌄</span></summary>
+          <div class="favorite-products" id="favoriteProducts"></div>
+          <div class="food-database">
+            <div class="food-database-heading">
+              <strong>🌍 Световна база храни</strong>
+              <small>Данни от Open Food Facts</small>
+            </div>
+            <form id="foodSearchForm" class="food-search-form">
+              <input id="foodSearchQuery" type="search" maxlength="80" placeholder="Напр. кисело мляко, овес, сирене" autocomplete="off">
+              <button class="secondary" type="submit">Търси</button>
+            </form>
+            <p id="foodSearchStatus" class="status-line" aria-live="polite"></p>
+            <div id="foodSearchResults" class="food-search-results"></div>
+          </div>
+          <div class="barcode-tools">
+            <input id="barcodeValue" type="text" inputmode="numeric" placeholder="Баркод на продукт">
+            <button id="lookupBarcode" class="secondary" type="button">Намери</button>
+            <button id="startBarcodeScanner" class="secondary barcode-camera" type="button" title="Отвори баркод четеца" aria-label="Отвори баркод четеца">▣</button>
+          </div>
+          <p id="barcodeStatus" class="status-line"></p>
+          <button id="clearManualFood" class="secondary wide clear-manual-food" type="button">Изчисти данните</button>
+          <form id="manualMealForm" class="manual-meal-form">
+            <label class="manual-name">Продукт или храна
+              <input id="manualName" type="text" maxlength="80" placeholder="Напр. протеин на прах" required>
+            </label>
+            <label>Количество, г
+              <input id="manualGrams" type="number" min="0" max="5000" step="0.1" placeholder="30">
+            </label>
+            <label class="manual-per100"><input id="manualPer100" type="checkbox"> Стойностите са за 100 г</label>
+            <label>Калории, kcal
+              <input id="manualCalories" type="number" min="0" max="10000" step="1" placeholder="120" required>
+            </label>
+            <label>Протеин, г
+              <input id="manualProtein" type="number" min="0" max="1000" step="0.1" placeholder="24">
+            </label>
+            <label>Въглехидрати, г
+              <input id="manualCarbs" type="number" min="0" max="1000" step="0.1" placeholder="3">
+            </label>
+            <label>Мазнини, г
+              <input id="manualFat" type="number" min="0" max="1000" step="0.1" placeholder="2">
+            </label>
+            <label>Фибри, г
+              <input id="manualFiber" type="number" min="0" max="1000" step="0.1" placeholder="0">
+            </label>
+            <div class="manual-preview" id="manualNutritionPreview">Въведи количество и стойности.</div>
+            <label class="manual-favorite"><input id="saveAsFavorite" type="checkbox"> Запази като любим продукт</label>
+            <button class="primary wide manual-submit" type="submit">Добави към дневника</button>
+          </form>
+          <p id="manualMealStatus" class="status-line" aria-live="polite"></p>
+        </details>
 
         <article class="ios-card hidden" id="analysisPanel">
           <div class="card-title-row">
@@ -145,6 +246,18 @@
             <strong id="analysisCalories"></strong>
           </div>
           <div id="analysisSummary"></div>
+          <details class="analysis-correction">
+            <summary>Коригирай резултата</summary>
+            <div class="correction-grid">
+              <label>Име<input id="correctedName" type="text"></label>
+              <label>Калории<input id="correctedCalories" type="number" min="0"></label>
+              <label>Протеин, г<input id="correctedProtein" type="number" min="0" step="0.1"></label>
+              <label>Въглехидрати, г<input id="correctedCarbs" type="number" min="0" step="0.1"></label>
+              <label>Мазнини, г<input id="correctedFat" type="number" min="0" step="0.1"></label>
+              <label>Фибри, г<input id="correctedFiber" type="number" min="0" step="0.1"></label>
+              <button id="applyAnalysisCorrection" class="secondary wide" type="button">Приложи корекцията</button>
+            </div>
+          </details>
           <button id="saveMeal" class="primary wide">Добави към дневника</button>
         </article>
       </section>
@@ -152,12 +265,34 @@
       <section class="view" id="view-history" data-title="История">
         <article class="ios-card">
           <h2><span class="title-icon">🧾</span> История на храненията</h2>
+          <div class="history-toolbar">
+            <label>Ден<input id="historyDate" type="date"></label>
+            <button id="showAllHistory" class="secondary" type="button">Всички</button>
+          </div>
+          <div id="weeklyStats" class="weekly-stats"></div>
+          <div class="archive-actions">
+            <button id="exportData" class="secondary" type="button">Експорт</button>
+            <label class="secondary import-label">Импорт<input id="importData" type="file" accept="application/json"></label>
+          </div>
+          <p id="archiveStatus" class="status-line"></p>
           <div id="mealHistory" class="history-list"></div>
         </article>
       </section>
 
       <section class="view" id="view-progress" data-title="Анализ и прогрес">
         <div class="progress-mini-grid" id="progressCards"></div>
+        <article class="ios-card week-progress-card">
+          <div class="card-title-row week-progress-head">
+            <div><h2><span class="title-icon">◷</span> Седмичен прогрес</h2><span id="weekProgressRange"></span></div>
+            <div class="week-nav">
+              <button id="previousWeek" class="icon-action" type="button" aria-label="Предишна седмица">‹</button>
+              <button id="currentWeek" class="secondary" type="button">Тази седмица</button>
+              <button id="nextWeek" class="icon-action" type="button" aria-label="Следваща седмица">›</button>
+            </div>
+          </div>
+          <div id="weekProgress" class="week-progress"></div>
+          <div class="week-legend"><span><i class="legend-good"></i>В целта</span><span><i class="legend-low"></i>Под целта</span><span><i class="legend-over"></i>Превишени</span></div>
+        </article>
         <article class="ios-card">
           <div class="card-title-row">
             <h2><span class="title-icon">📈</span> История на теглото</h2>
@@ -172,9 +307,37 @@
             <button class="primary" type="submit">Запиши</button>
           </form>
         </article>
+              <article class="ios-card reminder-card">
+          <h2><span class="title-icon">💧</span> Напомняне за вода</h2>
+          <div class="reminder-list water-only-reminder">
+            <label><input id="reminderWater" type="checkbox"> Напомняй ми през
+              <select id="waterInterval">
+                <option value="60">1 час</option>
+                <option value="120">2 часа</option>
+                <option value="180">3 часа</option>
+              </select>
+            </label>
+          </div>
+          <button id="saveReminders" class="primary wide" type="button">Запази напомнянето</button>
+          <p id="reminderStatus" class="status-line"></p>
+        </article>
       </section>
 
       <section class="view" id="view-chat" data-title="AI Диетолог">
+        <article class="ios-card fridge-card">
+          <div class="card-title-row">
+            <h2><span class="title-icon">❄</span> Хладилник</h2>
+            <button id="clearFridge" class="text-button" type="button">Изчисти</button>
+          </div>
+          <form id="fridgeForm" class="inline-form fridge-form">
+            <input id="fridgeInput" type="text" maxlength="80" placeholder="Напр. яйца, домати, сирене">
+            <button class="secondary" type="submit">Добави</button>
+          </form>
+          <div id="fridgeItems" class="fridge-items"></div>
+          <button id="generateFridgeRecipe" class="primary wide" type="button">Предложи AI рецепта</button>
+          <p id="fridgeStatus" class="status-line"></p>
+          <div id="fridgeRecipe" class="fridge-recipe hidden"></div>
+        </article>
         <article class="chat-panel">
           <div id="chatMessages" class="chat-messages"></div>
           <form id="chatForm" class="chat-form">
@@ -182,8 +345,56 @@
             <button class="send-button" type="submit" aria-label="Изпрати">➤</button>
           </form>
         </article>
+              
       </section>
     </main>
+
+
+
+    <div id="barcodeScannerModal" class="barcode-scanner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="barcodeScannerTitle">
+      <div class="barcode-scanner-shell">
+        <div class="barcode-scanner-head">
+          <div><small>Баркод четец</small><h2 id="barcodeScannerTitle">Насочи камерата към баркода</h2></div>
+          <button id="closeBarcodeScanner" class="icon-action" type="button" aria-label="Затвори">×</button>
+        </div>
+        <div class="barcode-video-wrap">
+          <video id="barcodeVideo" autoplay playsinline muted></video>
+          <div class="barcode-guide"><span></span></div>
+        </div>
+        <p id="liveBarcodeStatus" class="status-line">Камерата се стартира...</p>
+      </div>
+    </div>
+
+    <div id="calorieMascot" class="calorie-mascot" role="status" aria-live="polite" aria-hidden="true">
+      <div class="mascot-calorie-card">
+        <span class="mascot-mini-carrot">🥕</span>
+        <small>КАЛОРИИ</small>
+        <strong><b id="mascotCalories">0</b> <span>KCAL</span></strong>
+      </div>
+      <div class="carrot-mascot-art" aria-hidden="true">
+        <div class="carrot-leaves">🌿</div>
+        <div class="carrot-body">
+          <i class="carrot-eye left"></i>
+          <i class="carrot-eye right"></i>
+          <span class="carrot-smile"></span>
+        </div>
+      </div>
+    </div>
+
+    <dialog id="mealEditor" class="meal-editor">
+      <form id="mealEditForm">
+        <h2>Редактиране на хранене</h2>
+        <input id="editMealId" type="hidden">
+        <label>Име<input id="editMealName" type="text" required></label>
+        <label>Дата и час<input id="editMealDate" type="datetime-local" required></label>
+        <label>Калории<input id="editMealCalories" type="number" min="0" required></label>
+        <label>Протеин, г<input id="editMealProtein" type="number" min="0" step="0.1"></label>
+        <label>Въглехидрати, г<input id="editMealCarbs" type="number" min="0" step="0.1"></label>
+        <label>Мазнини, г<input id="editMealFat" type="number" min="0" step="0.1"></label>
+        <label>Фибри, г<input id="editMealFiber" type="number" min="0" step="0.1"></label>
+        <div class="split-actions"><button id="cancelMealEdit" class="secondary" type="button">Отказ</button><button class="primary" type="submit">Запази</button></div>
+      </form>
+    </dialog>
 
     <nav class="tabbar" aria-label="Основна навигация">
       <button class="tab active" data-view="dashboard"><span>🏠</span>Днес</button>
