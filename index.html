@@ -130,16 +130,15 @@
           </div>
         </details>
 
-        <details class="ios-card dashboard-collapsible" open>
-          <summary class="card-title-row collapsible-summary">
-            <h2><span class="title-icon">🥗</span> AI хранителен режим</h2>
-            <span class="collapsible-chevron">⌄</span>
-          </summary>
-          <div class="collapsible-content">
-            <button class="text-button collapsible-action" id="refreshPlan">↻ Нов</button>
-            <div id="aiMealPlan" class="plan-list"></div>
+        <article class="ios-card favorites-card">
+          <div class="card-title-row">
+            <h2><span class="title-icon">♥</span> Любими храни</h2>
+            <button class="text-button" type="button" data-jump="camera">＋ Нова</button>
           </div>
-        </details>
+          <p class="card-helper">Добавете често използвана храна към днешните калории с едно докосване.</p>
+          <div id="dashboardFavorites" class="dashboard-favorites"></div>
+          <p id="favoriteQuickStatus" class="status-line" aria-live="polite"></p>
+        </article>
 
         <details class="ios-card dashboard-collapsible" open>
           <summary class="card-title-row collapsible-summary">
@@ -191,7 +190,18 @@
 
         <details class="ios-card manual-meal-card">
           <summary class="manual-meal-summary"><span><span class="title-icon">＋</span> Ръчно добавяне</span><span class="manual-chevron">⌄</span></summary>
-          <div class="favorite-products" id="favoriteProducts"></div>
+          <div class="food-database">
+            <div class="food-database-heading">
+              <strong>🌍 Световна база храни</strong>
+              <small>Данни от Open Food Facts</small>
+            </div>
+            <form id="foodSearchForm" class="food-search-form">
+              <input id="foodSearchQuery" type="search" maxlength="80" placeholder="Напр. кисело мляко, овес, сирене" autocomplete="off">
+              <button class="secondary" type="submit">Търси</button>
+            </form>
+            <p id="foodSearchStatus" class="status-line" aria-live="polite"></p>
+            <div id="foodSearchResults" class="food-search-results"></div>
+          </div>
           <div class="barcode-tools">
             <input id="barcodeValue" type="text" inputmode="numeric" placeholder="Баркод на продукт">
             <button id="lookupBarcode" class="secondary" type="button">Намери</button>

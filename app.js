@@ -447,7 +447,9 @@ function renderDashboard() {
   const recommended = state.profile.recommendedCalories || targets.recommendedCalories;
   const limit = state.profile.dailyLimit || recommended;
   const remaining = Math.round(limit - consumed);
-  const percent = Math.min(Math.max(consumed / limit, 0), 1);
+  const calorieRatio = Math.max(consumed / Math.max(limit, 1), 0);
+  const percent = Math.min(calorieRatio, 1);
+  updateCalorieBackground(calorieRatio);
   $("recommendedCalories").textContent = `Преп. ${recommended} kcal`;
   $("remainingCalories").textContent = `${limit}`;
   $("consumedCalories").textContent = `${Math.round(consumed)}`;
@@ -486,6 +488,17 @@ function renderDashboard() {
   renderGoalSuggestions(targets);
   renderTodayMeals();
   renderProgressCards(targets);
+}
+
+function updateCalorieBackground(ratio) {
+  const zone = ratio >= 1
+    ? "red"
+    : ratio >= 0.8
+      ? "orange"
+      : ratio >= 0.5
+        ? "yellow"
+        : "green";
+  document.documentElement.dataset.calorieZone = zone;
 }
 
 async function generateAIPlan(force = false) {
@@ -684,12 +697,36 @@ function macroTotalsToday() {
   return state.meals
     .filter((meal) => new Date(meal.date).toDateString() === today)
     .reduce((sum, meal) => {
-      sum.protein += Number(meal.analysis.protein || 0);
-      sum.carbs += Number(meal.analysis.carbs || 0);
-      sum.fat += Number(meal.analysis.fat || 0);
-      sum.fiber += Number(meal.analysis.fiber || 0);
+      const nutrition = nutritionFromMeal(meal);
+      sum.protein += nutrition.protein;
+      sum.carbs += nutrition.carbs;
+      sum.fat += nutrition.fat;
+      sum.fiber += nutrition.fiber;
       return sum;
     }, { protein: 0, carbs: 0, fat: 0, fiber: 0 });
+}
+
+function nutritionFromMeal(meal) {
+  const analysis = meal?.analysis || {};
+  const foods = Array.isArray(analysis.foods) ? analysis.foods : [];
+  const foodTotals = foods.reduce((sum, food) => {
+    sum.protein += nutritionNumber(food.protein);
+    sum.carbs += nutritionNumber(food.carbs);
+    sum.fat += nutritionNumber(food.fat);
+    sum.fiber += nutritionNumber(food.fiber);
+    return sum;
+  }, { protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  return {
+    protein: nutritionNumber(analysis.protein ?? analysis.proteins) || foodTotals.protein,
+    carbs: nutritionNumber(analysis.carbs ?? analysis.carbohydrates) || foodTotals.carbs,
+    fat: nutritionNumber(analysis.fat ?? analysis.fats) || foodTotals.fat,
+    fiber: nutritionNumber(analysis.fiber ?? analysis.fibre) || foodTotals.fiber
+  };
+}
+
+function nutritionNumber(value) {
+  const number = Number(String(value ?? 0).replace(",", "."));
+  return Number.isFinite(number) ? number : 0;
 }
 
 function renderTodayMeals() {
@@ -785,7 +822,15 @@ async function saveManualMeal(event) {
       fat: nutrition.fat,
       fiber: nutrition.fiber,
       rating: grams ? grams + " г · ръчно добавено" : "Ръчно добавено",
-      foods: [{ name, grams: grams || 0, calories }],
+      foods: [{
+        name,
+        grams: grams || 0,
+        calories,
+        protein: nutrition.protein,
+        carbs: nutrition.carbs,
+        fat: nutrition.fat,
+        fiber: nutrition.fiber
+      }],
       reason: "Хранителните стойности са въведени ръчно."
     }
   };
@@ -796,7 +841,7 @@ async function saveManualMeal(event) {
 
   try {
     await save("nutriai.meals", state.meals);
-    if ($("saveAsFavorite")?.checked) await addCurrentFavorite(name, grams);
+    if ($("saveAsFavorite")?.checked) await addCurrentFavorite(name, grams, nutrition);
     renderAll();
     form.reset();
     $("manualMealStatus").textContent = name + " е добавен към дневника.";
@@ -1252,6 +1297,7 @@ function escapeHtml(value) {
 
 function bindEnhancedFeatures() {
   $("mealHistory")?.addEventListener("click", handleMealHistoryAction);
+  $("todayMeals")?.addEventListener("click", handleMealHistoryAction);
   $("mealEditForm")?.addEventListener("submit", saveMealEdit);
   $("cancelMealEdit")?.addEventListener("click", () => $("mealEditor").close());
 
@@ -1270,7 +1316,9 @@ function bindEnhancedFeatures() {
     $(id)?.addEventListener("change", updateManualNutritionPreview);
   });
 
-  $("favoriteProducts")?.addEventListener("click", loadFavoriteFromButton);
+  $("dashboardFavorites")?.addEventListener("click", handleDashboardFavorite);
+  $("foodSearchForm")?.addEventListener("submit", searchWorldFoods);
+  $("foodSearchResults")?.addEventListener("click", selectWorldFood);
   $("lookupBarcode")?.addEventListener("click", () => lookupBarcodeProduct($("barcodeValue").value.trim()));
   $("startBarcodeScanner")?.addEventListener("click", startLiveBarcodeScanner);
   $("closeBarcodeScanner")?.addEventListener("click", stopLiveBarcodeScanner);
@@ -1315,7 +1363,7 @@ function updateManualNutritionPreview() {
   preview.textContent = `За порцията: ${values.calories} kcal · П ${values.protein} г · В ${values.carbs} г · М ${values.fat} г`;
 }
 
-async function addCurrentFavorite(name, grams) {
+async function addCurrentFavorite(name, grams, portionNutrition) {
   const favorite = {
     id: crypto.randomUUID(),
     name,
@@ -1325,7 +1373,14 @@ async function addCurrentFavorite(name, grams) {
     protein: numberFromField("manualProtein") || 0,
     carbs: numberFromField("manualCarbs") || 0,
     fat: numberFromField("manualFat") || 0,
-    fiber: numberFromField("manualFiber") || 0
+    fiber: numberFromField("manualFiber") || 0,
+    portionNutrition: {
+      calories: nutritionNumber(portionNutrition?.calories),
+      protein: nutritionNumber(portionNutrition?.protein),
+      carbs: nutritionNumber(portionNutrition?.carbs),
+      fat: nutritionNumber(portionNutrition?.fat),
+      fiber: nutritionNumber(portionNutrition?.fiber)
+    }
   };
   const existing = state.favorites.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
   if (existing >= 0) state.favorites[existing] = { ...favorite, id: state.favorites[existing].id };
@@ -1335,31 +1390,186 @@ async function addCurrentFavorite(name, grams) {
 }
 
 function renderFavorites() {
-  const container = $("favoriteProducts");
-  if (!container) return;
+  const dashboard = $("dashboardFavorites");
+  if (!dashboard) return;
   if (!state.favorites.length) {
-    container.innerHTML = "";
+    dashboard.innerHTML = '<div class="empty-copy">Все още нямате любими храни. Добавете храна ръчно и отбележете „Запази като любим продукт“.</div>';
     return;
   }
-  container.innerHTML = '<span>Любими:</span>' + state.favorites.map((item) =>
-    `<button type="button" class="favorite-chip" data-favorite-id="${escapeHtml(item.id)}">${escapeHtml(item.name)}</button>`
-  ).join("");
+  dashboard.innerHTML = state.favorites.map((item) => {
+    const nutrition = favoritePortionNutrition(item);
+    const portion = item.per100 ? `${item.grams || 100} г` : (item.grams ? `${item.grams} г` : "1 порция");
+    return `
+      <div class="dashboard-favorite-row">
+        <div class="favorite-food-main">
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${escapeHtml(portion)} · ${nutrition.calories} kcal</span>
+        </div>
+        <button type="button" class="favorite-add-button" data-add-favorite="${escapeHtml(item.id)}" title="Добави към днешните калории">＋ Добави</button>
+        <button type="button" class="icon-action danger" data-delete-favorite="${escapeHtml(item.id)}" title="Премахни от любими" aria-label="Премахни от любими">×</button>
+      </div>`;
+  }).join("");
 }
 
-function loadFavoriteFromButton(event) {
-  const id = event.target.dataset.favoriteId;
-  if (!id) return;
+function favoritePortionNutrition(item) {
+  const grams = Number(item.grams) || (item.per100 ? 100 : 0);
+  const factor = item.per100 ? grams / 100 : 1;
+  const savedPortion = item.portionNutrition || item.nutrition || item.analysis || null;
+  if (savedPortion) {
+    return {
+      grams,
+      calories: Math.round(nutritionNumber(savedPortion.calories ?? savedPortion.totalCalories)),
+      protein: round(nutritionNumber(savedPortion.protein ?? savedPortion.proteins), 1),
+      carbs: round(nutritionNumber(savedPortion.carbs ?? savedPortion.carbohydrates), 1),
+      fat: round(nutritionNumber(savedPortion.fat ?? savedPortion.fats), 1),
+      fiber: round(nutritionNumber(savedPortion.fiber ?? savedPortion.fibre), 1)
+    };
+  }
+  const directNutrition = {
+    grams,
+    calories: Math.round(nutritionNumber(item.calories) * factor),
+    protein: round(nutritionNumber(item.protein ?? item.proteins) * factor, 1),
+    carbs: round(nutritionNumber(item.carbs ?? item.carbohydrates) * factor, 1),
+    fat: round(nutritionNumber(item.fat ?? item.fats) * factor, 1),
+    fiber: round(nutritionNumber(item.fiber ?? item.fibre) * factor, 1)
+  };
+  if (directNutrition.protein || directNutrition.carbs || directNutrition.fat || directNutrition.fiber) {
+    return directNutrition;
+  }
+
+  const matchingMeal = state.meals.find((meal) =>
+    String(meal.title || "").toLowerCase() === String(item.name || "").toLowerCase()
+  );
+  if (!matchingMeal) return directNutrition;
+  const mealNutrition = nutritionFromMeal(matchingMeal);
+  if (!mealNutrition.protein && !mealNutrition.carbs && !mealNutrition.fat && !mealNutrition.fiber) {
+    return directNutrition;
+  }
+  return {
+    grams: Number(matchingMeal.quantityGrams) || grams,
+    calories: Math.round(nutritionNumber(matchingMeal.analysis?.totalCalories) || directNutrition.calories),
+    ...mealNutrition
+  };
+}
+
+async function handleDashboardFavorite(event) {
+  const addId = event.target.dataset.addFavorite;
+  const deleteId = event.target.dataset.deleteFavorite;
+  if (addId) await addFavoriteToToday(addId, event.target);
+  if (deleteId) await deleteFavorite(deleteId);
+}
+
+async function addFavoriteToToday(id, button) {
   const item = state.favorites.find((favorite) => favorite.id === id);
   if (!item) return;
-  $("manualName").value = item.name;
-  $("manualGrams").value = item.grams || "";
-  $("manualPer100").checked = Boolean(item.per100);
-  $("manualCalories").value = item.calories;
-  $("manualProtein").value = item.protein;
-  $("manualCarbs").value = item.carbs;
-  $("manualFat").value = item.fat;
-  $("manualFiber").value = item.fiber;
-  updateManualNutritionPreview();
+  button.disabled = true;
+  let nutrition = favoritePortionNutrition(item);
+  let estimatedByAI = false;
+  if (!hasMacroNutrition(nutrition)) {
+    $("favoriteQuickStatus").textContent = `Допълвам хранителните стойности за ${item.name}...`;
+    try {
+      nutrition = await estimateFavoriteNutrition(item, nutrition);
+      estimatedByAI = true;
+      item.grams = nutrition.grams || item.grams;
+      item.portionNutrition = {
+        calories: nutrition.calories,
+        protein: nutrition.protein,
+        carbs: nutrition.carbs,
+        fat: nutrition.fat,
+        fiber: nutrition.fiber
+      };
+      await save("nutriai.favorites", state.favorites);
+    } catch (error) {
+      $("favoriteQuickStatus").textContent = "Липсват протеин, въглехидрати и мазнини. Отворете „Нова“ и попълнете стойностите или изберете продукт от световната база.";
+      button.disabled = false;
+      return;
+    }
+  }
+  const meal = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    title: item.name,
+    mealType: mealTypeForTime(new Date()),
+    image: "",
+    quantityGrams: nutrition.grams,
+    analysis: {
+      totalCalories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      fiber: nutrition.fiber,
+      rating: estimatedByAI ? "Ориентировъчна AI оценка" : "Добавено от любими",
+      foods: [{
+        name: item.name,
+        grams: nutrition.grams,
+        calories: nutrition.calories,
+        protein: nutrition.protein,
+        carbs: nutrition.carbs,
+        fat: nutrition.fat,
+        fiber: nutrition.fiber
+      }],
+      reason: estimatedByAI
+        ? "Липсващите хранителни стойности са попълнени ориентировъчно от AI."
+        : "Запазена любима храна."
+    }
+  };
+  state.meals.unshift(meal);
+  try {
+    await save("nutriai.meals", state.meals);
+    renderAll();
+    renderFavorites();
+    $("favoriteQuickStatus").textContent = estimatedByAI
+      ? `${item.name} е добавена. Макронутриентите са ориентировъчна AI оценка.`
+      : `${item.name} е добавена към днешните калории.`;
+  } catch (error) {
+    state.meals = state.meals.filter((savedMeal) => savedMeal.id !== meal.id);
+    $("favoriteQuickStatus").textContent = "Храната не можа да бъде добавена. Опитайте отново.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function hasMacroNutrition(nutrition) {
+  return nutritionNumber(nutrition?.protein) > 0
+    || nutritionNumber(nutrition?.carbs) > 0
+    || nutritionNumber(nutrition?.fat) > 0
+    || nutritionNumber(nutrition?.fiber) > 0;
+}
+
+async function estimateFavoriteNutrition(item, currentNutrition) {
+  const grams = nutritionNumber(currentNutrition?.grams) || nutritionNumber(item.grams) || 100;
+  const statedCalories = nutritionNumber(currentNutrition?.calories) || nutritionNumber(item.calories);
+  const data = await callGroq([
+    {
+      role: "system",
+      content: "Ти си нутриционист. Връщай само валиден JSON. Оценките трябва да са реалистични, но ясно ориентировъчни."
+    },
+    {
+      role: "user",
+      content: `Оцени хранителните стойности за цялата порция: храна „${item.name}", количество ${grams} г, записани калории ${statedCalories || "неизвестни"}. Ако записаните калории са очевидно несъвместими с храната и порцията, използвай по-реалистична ориентировъчна стойност. Върни точно: {"calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0}`
+    }
+  ], true);
+  const result = parseGroqJsonLoose(data);
+  const nutrition = {
+    grams,
+    calories: Math.round(nutritionNumber(result.calories ?? result.totalCalories)),
+    protein: round(nutritionNumber(result.protein ?? result.proteins), 1),
+    carbs: round(nutritionNumber(result.carbs ?? result.carbohydrates), 1),
+    fat: round(nutritionNumber(result.fat ?? result.fats), 1),
+    fiber: round(nutritionNumber(result.fiber ?? result.fibre), 1)
+  };
+  if (!nutrition.calories || !hasMacroNutrition(nutrition)) {
+    throw new Error("AI не върна достатъчно хранителни стойности.");
+  }
+  return nutrition;
+}
+
+async function deleteFavorite(id) {
+  const item = state.favorites.find((favorite) => favorite.id === id);
+  if (!item || !confirm(`Да премахна ли „${item.name}“ от любими?`)) return;
+  state.favorites = state.favorites.filter((favorite) => favorite.id !== id);
+  await save("nutriai.favorites", state.favorites);
+  renderFavorites();
 }
 
 function handleMealHistoryAction(event) {
@@ -1451,9 +1661,9 @@ async function lookupBarcodeProduct(code) {
   }
   status.textContent = "Търся продукта...";
   try {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json`);
-    if (!response.ok) throw new Error("Продуктът не е намерен.");
+    const response = await fetch(`/api/foods?barcode=${encodeURIComponent(code)}`);
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Продуктът не е намерен.");
     if (!data.product) throw new Error("Продуктът не е намерен.");
     const product = data.product;
     const nutrients = product.nutriments || {};
@@ -1469,6 +1679,75 @@ async function lookupBarcodeProduct(code) {
   } catch (error) {
     status.textContent = error.message || "Не успях да заредя продукта.";
   }
+}
+
+async function searchWorldFoods(event) {
+  event.preventDefault();
+  const query = $("foodSearchQuery").value.trim();
+  const status = $("foodSearchStatus");
+  const results = $("foodSearchResults");
+  if (query.length < 2) {
+    status.textContent = "Въведете поне 2 букви.";
+    return;
+  }
+  status.textContent = "Търся в световната база...";
+  results.innerHTML = "";
+  try {
+    const response = await fetch(`/api/foods?query=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Базата временно не отговаря.");
+    const products = (data.products || []).map(normalizeWorldFood).filter((item) => item.name && item.calories > 0);
+    window.nutriWorldFoodResults = products;
+    if (!products.length) {
+      status.textContent = "Не намерих храна с хранителни стойности. Опитайте с друго име или марка.";
+      return;
+    }
+    status.textContent = `${products.length} резултата. Стойностите са за 100 г и са ориентировъчни.`;
+    results.innerHTML = products.map((item, index) => `
+      <div class="food-search-result">
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy">` : '<div class="food-result-placeholder">🍽</div>'}
+        <div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${escapeHtml(item.brand || "Хранителен продукт")} · ${item.calories} kcal / 100 г</span>
+        </div>
+        <button type="button" class="secondary" data-world-food-index="${index}">Избери</button>
+      </div>`).join("");
+  } catch (error) {
+    status.textContent = error.message || "Търсенето не бе успешно. Проверете връзката и опитайте отново.";
+  }
+}
+
+function normalizeWorldFood(product) {
+  const nutrients = product.nutriments || {};
+  return {
+    name: product.product_name_bg || product.product_name || "",
+    brand: product.brands || "",
+    image: product.image_front_small_url || "",
+    grams: Number(product.serving_quantity) || 100,
+    calories: Math.round(Number(nutrients["energy-kcal_100g"]) || Number(nutrients.energy_100g) / 4.184 || 0),
+    protein: round(Number(nutrients.proteins_100g) || 0, 1),
+    carbs: round(Number(nutrients.carbohydrates_100g) || 0, 1),
+    fat: round(Number(nutrients.fat_100g) || 0, 1),
+    fiber: round(Number(nutrients.fiber_100g) || 0, 1)
+  };
+}
+
+function selectWorldFood(event) {
+  const index = event.target.dataset.worldFoodIndex;
+  if (index === undefined) return;
+  const item = window.nutriWorldFoodResults?.[Number(index)];
+  if (!item) return;
+  $("manualName").value = item.name;
+  $("manualGrams").value = item.grams;
+  $("manualPer100").checked = true;
+  $("manualCalories").value = item.calories;
+  $("manualProtein").value = item.protein;
+  $("manualCarbs").value = item.carbs;
+  $("manualFat").value = item.fat;
+  $("manualFiber").value = item.fiber;
+  updateManualNutritionPreview();
+  $("foodSearchStatus").textContent = `${item.name} е заредена. Проверете порцията и натиснете „Добави към дневника“.`;
+  $("manualName").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function scanBarcodeImage(event) {
@@ -1686,12 +1965,16 @@ function clearManualFoodData() {
 }
 
 function selectMealTypeByTime(date = new Date()) {
-  const hour = date.getHours();
-  const type = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 22 ? "dinner" : "snack";
+  const type = mealTypeForTime(date);
   $("mealType").value = type;
   document.querySelectorAll("[data-meal]").forEach((button) => {
     button.classList.toggle("active", button.dataset.meal === type);
   });
+}
+
+function mealTypeForTime(date = new Date()) {
+  const hour = date.getHours();
+  return hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 22 ? "dinner" : "snack";
 }
 
 
