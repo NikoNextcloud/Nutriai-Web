@@ -1131,15 +1131,13 @@ function mealRowHtml(meal, includeDate = false) {
   const mealType = mealTypeLabel(meal.mealType);
   const health = getHealthRating(meal.analysis || {});
   const nutrition = nutritionFromMeal(meal);
-  const favorite = !includeDate && findFavoriteByName(meal.title);
-  const favoriteButton = !includeDate
-    ? '<button type="button" class="icon-action favorite-toggle ' + (favorite ? 'active' : '') + '" data-toggle-meal-favorite="' + escapeHtml(meal.id) + '" title="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '" aria-label="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '">' + (favorite ? '♥' : '♡') + '</button>'
-    : '';
+  const favorite = findFavoriteByName(meal.title);
+  const favoriteButton = '<button type="button" class="icon-action favorite-toggle ' + (favorite ? 'active' : '') + '" data-toggle-meal-favorite="' + escapeHtml(meal.id) + '" title="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '" aria-label="' + (favorite ? 'Премахни от любими' : 'Добави в любими') + '">' + (favorite ? '♥' : '♡') + '</button>';
   return '<div class="meal-row meal-health ' + health.className + '" data-meal-id="' + escapeHtml(meal.id) + '">' +
     mealImageHtml(meal) +
     '<div class="meal-row-main">' +
       '<strong>' + mealTypeIcon(meal.mealType) + ' ' + escapeHtml(meal.title) + '</strong>' +
-      '<p>' + escapeHtml(time) + ' • ' + escapeHtml(mealType) + ' • ' + escapeHtml(meal.analysis.rating || '') + '</p>' +
+      '<p>' + escapeHtml(time) + ' • ' + escapeHtml(mealType) + '</p>' +
       '<div class="meal-macro-summary" aria-label="Макронутриенти">' +
         '<span class="macro-protein">П ' + round(nutrition.protein, 1) + ' г</span>' +
         '<span class="macro-carbs">В ' + round(nutrition.carbs, 1) + ' г</span>' +
@@ -1157,7 +1155,9 @@ function mealRowHtml(meal, includeDate = false) {
 }
 
 function mealImageHtml(meal) {
-  if (!meal.image || !String(meal.image).startsWith("data:image/")) return "";
+  if (!meal.image || !String(meal.image).startsWith("data:image/")) {
+    return '<div class="meal-thumb meal-thumb-placeholder" aria-hidden="true">🍽</div>';
+  }
   return '<img class="meal-thumb" src="' + meal.image + '" alt="Запазена снимка на хранене">';
 }
 
