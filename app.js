@@ -773,15 +773,21 @@ function bindCamera() {
   $("foodImage").addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    state.selectedImageDataUrl = await fileToDataUrl(file);
-    selectMealTypeByTime(new Date());
-    $("preview").src = state.selectedImageDataUrl;
-    $("preview").style.display = "block";
-    $("photoPlaceholder").style.display = "none";
-    $("analysisPanel").classList.add("hidden");
-    $("foodScanOverlay").classList.add("hidden");
-    $("foodScanOverlay").innerHTML = "";
-    $("photoFrame").classList.remove("has-scan-results");
+    $("analysisStatus").textContent = "Подготвям снимката...";
+    try {
+      state.selectedImageDataUrl = await fileToDataUrl(file);
+      selectMealTypeByTime(new Date());
+      $("preview").src = state.selectedImageDataUrl;
+      $("preview").style.display = "block";
+      $("photoPlaceholder").style.display = "none";
+      $("analysisPanel").classList.add("hidden");
+      $("foodScanOverlay").classList.add("hidden");
+      $("foodScanOverlay").innerHTML = "";
+      $("photoFrame").classList.remove("has-scan-results");
+      $("analysisStatus").textContent = "Снимката е готова за анализ.";
+    } catch (error) {
+      $("analysisStatus").textContent = error.message || "Не успях да заредя снимката.";
+    }
   });
 
   $("analyzeButton").addEventListener("click", analyzeFood);
@@ -1322,9 +1328,53 @@ function renderChat() {
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+    reader.onload = async () => {
+      try {
+        resolve(await compressImageDataUrl(reader.result));
+      } catch (error) {
+        reject(error);
+      }
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+function compressImageDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const targetLength = 1_500_000;
+      let maxSide = 1280;
+      let quality = 0.82;
+      let output = "";
+
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, width, height);
+        output = canvas.toDataURL("image/jpeg", quality);
+
+        if (output.length <= targetLength || (maxSide <= 768 && quality <= 0.58)) {
+          break;
+        }
+
+        if (quality > 0.62) {
+          quality -= 0.1;
+        } else {
+          maxSide = Math.round(maxSide * 0.82);
+        }
+      }
+
+      resolve(output || dataUrl);
+    };
+    image.onerror = () => reject(new Error("Снимката не може да бъде прочетена. Опитай с друга снимка."));
+    image.src = dataUrl;
   });
 }
 
