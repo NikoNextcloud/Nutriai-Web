@@ -1017,7 +1017,7 @@ function foodItemHtml(food) {
 
 async function callGroq(messages, jsonMode = false) {
   const body = {
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    model: "qwen/qwen3.6-27b",
     messages,
     temperature: 0.2,
     max_completion_tokens: 1400,

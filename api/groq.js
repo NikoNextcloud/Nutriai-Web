@@ -10,13 +10,18 @@ export default async function handler(request, response) {
   }
 
   try {
+    const payload = {
+      ...request.body,
+      model: normalizeGroqModel(request.body?.model)
+    };
+
     const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify(request.body)
+      body: JSON.stringify(payload)
     });
 
     const data = await upstream.json();
@@ -24,4 +29,19 @@ export default async function handler(request, response) {
   } catch (error) {
     return response.status(500).json({ error: error.message || "Groq proxy failed." });
   }
+}
+
+function normalizeGroqModel(model) {
+  const deprecatedModels = new Set([
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-90b-vision-preview"
+  ]);
+
+  if (!model || deprecatedModels.has(model)) {
+    return "qwen/qwen3.6-27b";
+  }
+
+  return model;
 }
