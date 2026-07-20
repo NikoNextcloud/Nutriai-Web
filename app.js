@@ -1024,9 +1024,8 @@ async function callGroq(messages, jsonMode = false) {
     top_p: 1,
     stream: false
   };
-  if (jsonMode) {
-    body.response_format = { type: "json_object" };
-  }
+  // Strict JSON mode can trigger failed_generation on the Groq vision model.
+  // The prompt still requests JSON and the parser below handles light wrappers.
 
   const useProxy = canUseServerProxy() && !state.apiKey;
   const endpoint = useProxy ? "/api/groq" : "https://api.groq.com/openai/v1/chat/completions";
@@ -1069,7 +1068,21 @@ function parseGroqJsonLoose(data) {
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "");
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Accept a short sentence or markdown placed before/after the JSON object.
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      } catch {
+        // Fall through to a user-friendly message.
+      }
+    }
+    throw new Error("AI върна невалиден резултат. Опитай отново със снимка, на която храната се вижда по-ясно.");
+  }
 }
 
 function normalizeAnalysis(raw) {
