@@ -6,6 +6,10 @@
       "destination": "/api/groq.js"
     },
     {
+      "source": "/api/gemini",
+      "destination": "/api/gemini.js"
+    },
+    {
       "source": "/api/foods",
       "destination": "/api/foods.js"
     }

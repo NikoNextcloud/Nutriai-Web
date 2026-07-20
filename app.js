@@ -10,7 +10,7 @@ const state = {
     }
   ]),
   water: load("nutriai.water", { date: new Date().toDateString(), amount: 0 }),
-  apiKey: localStorage.getItem("nutriai.groqApiKey") || localStorage.getItem("nutriai.apiKey") || "",
+  apiKey: localStorage.getItem("nutriai.geminiApiKey") || localStorage.getItem("nutriai.groqApiKey") || localStorage.getItem("nutriai.apiKey") || "",
   aiPlan: load("nutriai.aiPlan", null),
   aiPlanVariant: load("nutriai.aiPlanVariant", 0),
   favorites: load("nutriai.favorites", []),
@@ -908,7 +908,7 @@ async function saveAnalyzedMeal() {
 
 async function analyzeFood() {
   if (!canUseServerProxy() && !state.apiKey) {
-    $("analysisStatus").textContent = "AI анализът работи автоматично през Vercel, когато е настроен GROQ_API_KEY.";
+    $("analysisStatus").textContent = "AI анализът работи автоматично през Vercel, когато е настроен GEMINI_API_KEY.";
     return;
   }
   if (!state.selectedImageDataUrl) {
@@ -1023,26 +1023,22 @@ function foodItemHtml(food) {
 
 async function callGroq(messages, jsonMode = false) {
   const body = {
-    model: "qwen/qwen3.6-27b",
+    model: "gemini-2.5-flash",
     messages,
     temperature: 0.2,
     max_completion_tokens: 1400,
     top_p: 1,
-    stream: false
+    stream: false,
+    jsonMode: Boolean(jsonMode)
   };
-  // Strict JSON mode can trigger failed_generation on the Groq vision model.
-  // The prompt still requests JSON and the parser below handles light wrappers.
 
-  const useProxy = canUseServerProxy() && !state.apiKey;
-  const endpoint = useProxy ? "/api/groq" : "https://api.groq.com/openai/v1/chat/completions";
+  const useProxy = canUseServerProxy();
+  const endpoint = "/api/gemini";
   const headers = {
     "Content-Type": "application/json"
   };
   if (!useProxy) {
-    if (!state.apiKey) {
-      throw new Error("Липсва Groq ключ. Във Vercel добави Environment Variable GROQ_API_KEY.");
-    }
-    headers.Authorization = `Bearer ${state.apiKey}`;
+    throw new Error("AI работи автоматично през Vercel, когато е настроен GEMINI_API_KEY.");
   }
 
   const response = await fetch(endpoint, {
@@ -1053,33 +1049,33 @@ async function callGroq(messages, jsonMode = false) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(getGroqErrorMessage(data, response.status));
+    throw new Error(getAIErrorMessage(data, response.status));
   }
   return data;
 }
 
-function getGroqErrorMessage(data, status) {
+function getAIErrorMessage(data, status) {
   const raw = data?.error?.message || data?.error || data?.message || "";
   const message = String(raw || "").trim();
   const lower = message.toLowerCase();
 
-  if (lower.includes("grog_api_key") || lower.includes("groq_api_key") || lower.includes("api key")) {
-    return "Groq ключът липсва или не е правилен. Провери във Vercel дали има Environment Variable с име GROQ_API_KEY и направи Redeploy.";
+  if (lower.includes("gemini_api_key") || lower.includes("api key") || lower.includes("api_key_invalid")) {
+    return "Gemini ключът липсва или не е правилен. Провери във Vercel дали има Environment Variable с име GEMINI_API_KEY и направи Redeploy.";
   }
   if (lower.includes("model") && (lower.includes("does not exist") || lower.includes("access"))) {
-    return "Избраният Groq модел не е достъпен за този акаунт. Проектът е настроен към qwen/qwen3.6-27b; redeploy-ни последната версия.";
+    return "Избраният Gemini модел не е достъпен за този акаунт. Можеш да добавиш GEMINI_MODEL във Vercel, например gemini-2.5-flash.";
   }
   if (lower.includes("failed_generation") || lower.includes("failed to validate json")) {
     return "AI не успя да върне правилен резултат за тази снимка. Опитай пак със снимка, на която храната се вижда по-ясно.";
   }
   if (lower.includes("rate limit") || status === 429) {
-    return "Groq лимитът е достигнат за момента. Изчакай малко и опитай отново.";
+    return "Gemini лимитът е достигнат за момента. Изчакай малко и опитай отново.";
   }
   if (status === 413 || lower.includes("too large") || lower.includes("20 mb")) {
     return "Снимката е твърде голяма. Избери по-малка снимка или я направи отново.";
   }
 
-  return message || `Groq заявката не бе успешна. Код: ${status}.`;
+  return message || `Gemini заявката не бе успешна. Код: ${status}.`;
 }
 
 function canUseServerProxy() {
@@ -1288,7 +1284,7 @@ function bindChat() {
     const text = $("chatInput").value.trim();
     if (!text) return;
     if (!canUseServerProxy() && !state.apiKey) {
-      alert("AI чатът работи автоматично през Vercel, когато е настроен GROQ_API_KEY.");
+      alert("AI чатът работи автоматично през Vercel, когато е настроен GEMINI_API_KEY.");
       return;
     }
 
@@ -2224,7 +2220,7 @@ async function generateFridgeRecipe() {
     return;
   }
   if (!canUseServerProxy() && !state.apiKey) {
-    $("fridgeStatus").textContent = "AI рецептата работи през Vercel с настроен GROQ_API_KEY.";
+    $("fridgeStatus").textContent = "AI рецептата работи през Vercel с настроен GEMINI_API_KEY.";
     return;
   }
   const button = $("generateFridgeRecipe");
