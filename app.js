@@ -932,7 +932,20 @@ async function analyzeFood() {
 Не използвай markdown, code block или обяснение извън JSON.`;
 
   try {
-    const result = await analyzeFoodWithAI(prompt);
+    const result = await callGroq([
+      {
+        role: "system",
+        content: "Отговаряй само с валиден JSON на български. Не препоръчвай опасни диети."
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: state.selectedImageDataUrl } }
+        ]
+      }
+    ], true);
+
     state.lastAnalysis = parseGroqJson(result);
     renderAnalysisSummary(state.lastAnalysis);
     renderFoodScanOverlay(state.lastAnalysis);
@@ -945,45 +958,6 @@ async function analyzeFood() {
     $("analysisStatus").textContent = error.message;
   } finally {
     $("analyzeButton").disabled = false;
-  }
-}
-
-async function analyzeFoodWithAI(prompt) {
-  const messages = [
-    {
-      role: "system",
-      content: "Отговаряй само с валиден JSON на български. Не препоръчвай опасни диети."
-    },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: prompt },
-        { type: "image_url", image_url: { url: state.selectedImageDataUrl } }
-      ]
-    }
-  ];
-
-  const firstResult = await callGroq(messages, true);
-  try {
-    parseGroqJson(firstResult);
-    return firstResult;
-  } catch {
-    const retryPrompt = `${prompt}
-
-ВАЖНО: Предишният отговор не беше валиден JSON. Върни само един JSON обект, без markdown, без обяснения, без текст преди или след него. Ако храната не е ясна, пак върни JSON с foods: [] и reason.`;
-    return callGroq([
-      {
-        role: "system",
-        content: "Върни само суров валиден JSON. Никакъв markdown. Никакви обяснения."
-      },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: retryPrompt },
-          { type: "image_url", image_url: { url: state.selectedImageDataUrl } }
-        ]
-      }
-    ], false);
   }
 }
 
@@ -1113,58 +1087,28 @@ function parseGroqJson(data) {
 }
 
 function parseGroqJsonLoose(data) {
-  const text = data.choices?.[0]?.message?.content || data.text || "";
+  const text = data.choices?.[0]?.message?.content || "";
   if (!text.trim()) throw new Error("AI не върна текстов резултат.");
-  const cleaned = cleanAIJsonText(text);
-  const direct = tryParseJson(cleaned);
-  if (direct !== null) return unwrapJsonString(direct);
-
-  const objectText = extractJsonText(cleaned);
-  if (objectText) {
-    const extracted = tryParseJson(objectText);
-    if (extracted !== null) return unwrapJsonString(extracted);
-  }
-
-  throw new Error("AI върна невалиден резултат. Опитай отново със снимка, на която храната се вижда по-ясно.");
-}
-
-function cleanAIJsonText(text) {
-  return String(text)
+  const cleaned = text
     .trim()
-    .replace(/^\uFEFF/, "")
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/,\s*([}\]])/g, "$1");
-}
-
-function tryParseJson(text) {
+    .replace(/\s*```$/i, "");
   try {
-    return JSON.parse(text);
+    return JSON.parse(cleaned);
   } catch {
-    return null;
+    // Accept a short sentence or markdown placed before/after the JSON object.
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1));
+      } catch {
+        // Fall through to a user-friendly message.
+      }
+    }
+    throw new Error("AI върна невалиден резултат. Опитай отново със снимка, на която храната се вижда по-ясно.");
   }
-}
-
-function extractJsonText(text) {
-  const objectStart = text.indexOf("{");
-  const arrayStart = text.indexOf("[");
-  const starts = [objectStart, arrayStart].filter((index) => index >= 0);
-  if (!starts.length) return "";
-
-  const start = Math.min(...starts);
-  const open = text[start];
-  const close = open === "{" ? "}" : "]";
-  const end = text.lastIndexOf(close);
-  return end > start ? text.slice(start, end + 1) : "";
-}
-
-function unwrapJsonString(value) {
-  if (typeof value !== "string") return value;
-  const reparsed = tryParseJson(cleanAIJsonText(value));
-  return reparsed !== null ? reparsed : value;
 }
 
 function normalizeAnalysis(raw) {
