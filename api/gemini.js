@@ -8,7 +8,7 @@ export default async function handler(request, response) {
   if (!apiKey) {
     return response.status(500).json({
       error: {
-        message: "GEMINI_API_KEY не е настроен във Vercel. Добави го в Settings -> Environment Variables и направи Redeploy."
+        message: "GEMINI_API_KEY is not configured in Vercel."
       }
     });
   }
@@ -27,14 +27,14 @@ export default async function handler(request, response) {
 
     const data = await upstream.json().catch(() => ({
       error: {
-        message: "Gemini върна нечетим отговор. Опитай отново след малко."
+        message: "Gemini returned an unreadable response."
       }
     }));
 
     if (!upstream.ok) {
       return response.status(upstream.status).json({
         error: {
-          message: data?.error?.message || "Gemini заявката не бе успешна."
+          message: data?.error?.message || "Gemini request failed."
         }
       });
     }
@@ -43,7 +43,7 @@ export default async function handler(request, response) {
   } catch (error) {
     return response.status(500).json({
       error: {
-        message: error.message || "Връзката към Gemini не бе успешна."
+        message: error.message || "Gemini proxy failed."
       }
     });
   }
