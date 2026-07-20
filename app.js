@@ -1047,9 +1047,33 @@ async function callGroq(messages, jsonMode = false) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error?.message || "Groq заявката не бе успешна.");
+    throw new Error(getGroqErrorMessage(data, response.status));
   }
   return data;
+}
+
+function getGroqErrorMessage(data, status) {
+  const raw = data?.error?.message || data?.error || data?.message || "";
+  const message = String(raw || "").trim();
+  const lower = message.toLowerCase();
+
+  if (lower.includes("grog_api_key") || lower.includes("groq_api_key") || lower.includes("api key")) {
+    return "Groq ключът липсва или не е правилен. Провери във Vercel дали има Environment Variable с име GROQ_API_KEY и направи Redeploy.";
+  }
+  if (lower.includes("model") && (lower.includes("does not exist") || lower.includes("access"))) {
+    return "Избраният Groq модел не е достъпен за този акаунт. Проектът е настроен към qwen/qwen3.6-27b; redeploy-ни последната версия.";
+  }
+  if (lower.includes("failed_generation") || lower.includes("failed to validate json")) {
+    return "AI не успя да върне правилен резултат за тази снимка. Опитай пак със снимка, на която храната се вижда по-ясно.";
+  }
+  if (lower.includes("rate limit") || status === 429) {
+    return "Groq лимитът е достигнат за момента. Изчакай малко и опитай отново.";
+  }
+  if (status === 413 || lower.includes("too large") || lower.includes("20 mb")) {
+    return "Снимката е твърде голяма. Избери по-малка снимка или я направи отново.";
+  }
+
+  return message || `Groq заявката не бе успешна. Код: ${status}.`;
 }
 
 function canUseServerProxy() {

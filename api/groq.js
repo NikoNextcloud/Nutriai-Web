@@ -6,7 +6,11 @@ export default async function handler(request, response) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return response.status(500).json({ error: "GROQ_API_KEY is not configured." });
+    return response.status(500).json({
+      error: {
+        message: "GROQ_API_KEY не е настроен във Vercel. Добави го в Settings -> Environment Variables и redeploy."
+      }
+    });
   }
 
   try {
@@ -24,10 +28,18 @@ export default async function handler(request, response) {
       body: JSON.stringify(payload)
     });
 
-    const data = await upstream.json();
+    const data = await upstream.json().catch(() => ({
+      error: {
+        message: "Groq върна нечетим отговор. Опитай отново след малко."
+      }
+    }));
     return response.status(upstream.status).json(data);
   } catch (error) {
-    return response.status(500).json({ error: error.message || "Groq proxy failed." });
+    return response.status(500).json({
+      error: {
+        message: error.message || "Връзката към Groq не бе успешна."
+      }
+    });
   }
 }
 
