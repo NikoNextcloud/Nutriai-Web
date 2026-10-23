@@ -2036,6 +2036,7 @@ function exportNutriData() {
     meals: state.meals,
     weights: state.weights,
     favorites: state.favorites,
+    customProducts: window.NutriAICustomProducts?.all() || [],
     reminders: state.reminders,
     water: state.water
   };
@@ -2066,8 +2067,12 @@ async function importNutriData(event) {
       save("nutriai.weights", state.weights),
       save("nutriai.favorites", state.favorites),
       save("nutriai.reminders", state.reminders),
-      save("nutriai.water", state.water)
+      save("nutriai.water", state.water),
+      ...(Array.isArray(data.customProducts) ? [save("nutriai.customProducts.v1", data.customProducts)] : [])
     ]);
+    if (Array.isArray(data.customProducts)) {
+      window.dispatchEvent(new CustomEvent("nutriai:personal-catalog-reloaded", { detail: { products: data.customProducts } }));
+    }
     hydrateReminderForm();
     renderFavorites();
     renderAll();
