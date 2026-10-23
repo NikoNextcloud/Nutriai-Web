@@ -48,7 +48,7 @@ export default async function handler(request, response) {
           "Accept-Language": "bg,en;q=0.8",
           "User-Agent": USER_AGENT
         },
-        signal: AbortSignal.timeout(6500)
+        signal: AbortSignal.timeout(4200)
       });
       lastStatus = upstream.status;
 
