@@ -16,7 +16,7 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: "Въведете име или баркод на продукт." });
   }
 
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_front_small_url,nutriments,serving_quantity";
+  const fields = "code,product_name,product_name_bg,generic_name,brands,image_front_url,image_front_small_url,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,ingredients_analysis_tags,categories_tags,quantity";
   const upstreamPath = barcode
     ? `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${encodeURIComponent(fields)}`
     : `/cgi/search.pl?action=process&search_terms=${encodeURIComponent(query)}&search_simple=1&json=1&page_size=12&fields=${encodeURIComponent(fields)}`;
