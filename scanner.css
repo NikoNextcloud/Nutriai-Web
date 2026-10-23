@@ -102,3 +102,96 @@
 .tabbar .tab-scanner.active{color:#214b3c}
 @media(max-width:360px){.product-hero{padding:18px 15px}.product-barcode-line{display:block}.product-barcode-line>div{margin-top:7px}.product-hero-actions{flex-direction:column}.product-hero-art{height:155px}}
 @media(prefers-reduced-motion:reduce){#view-products.active{animation:none}}
+
+
+/* Six equally spaced tabs: the legacy stylesheet defines only five columns. */
+.tabbar {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  align-items: stretch !important;
+  padding: 7px 6px !important;
+  border-radius: 22px !important;
+  max-width: 492px;
+  overflow: hidden;
+}
+.tabbar .tab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 61px !important;
+  padding: 6px 1px 5px !important;
+  border-radius: 14px !important;
+  font-size: clamp(.52rem, 2vw, .65rem) !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.02em;
+  text-align: center;
+  white-space: nowrap;
+}
+.tabbar .tab > span {
+  display: grid !important;
+  place-items: center !important;
+  width: 25px;
+  height: 25px;
+}
+.tabbar .tab > span svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+}
+.tabbar .tab.active {
+  background: color-mix(in srgb, var(--green) 11%, transparent) !important;
+}
+.tabbar .tab:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -3px;
+}
+@media (max-width: 360px) {
+  .tabbar {width: calc(100% - 8px) !important; padding: 5px 3px !important; gap: 0 !important;}
+  .tabbar .tab {font-size: .53rem !important; min-height: 58px !important; gap: 4px !important;}
+  .tabbar .tab > span svg {width: 19px; height: 19px;}
+}
+
+/* Keep the original camera frame and the verified catalog image distinguishable. */
+.product-scan-photo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  margin-top: 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-2);
+}
+.product-scan-photo img {
+  display: block;
+  width: 92px;
+  height: 86px;
+  object-fit: contain;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: #eaf0e6;
+}
+.product-scan-photo strong {display:block; font-size: .78rem; margin-bottom: 6px; color: var(--text);}
+.product-scan-photo small {display: block; font-size: .67rem; line-height: 1.5; color: var(--muted);}
+.product-identity-visual {display:grid;gap:7px;align-content:center}
+.product-identity-visual .product-identity-image {width:100%;max-width:112px;height:118px;object-fit:contain;}
+.product-identity-visual-caption {font-size:.6rem;color:var(--muted);line-height:1.3;text-align:center}
+.product-identity-scan-photo {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--card-2);
+}
+.product-identity-scan-photo img {width:68px;height:68px;object-fit:contain;border-radius:9px}
+.product-identity-scan-photo span {color:var(--muted);font-size:.69rem;line-height:1.5}
+.product-identity-productname {min-width:0}
+.product-product-image-note {font-size:.68rem;color:var(--muted);margin:8px 0 0}
+.product-scan-status[data-status-type="error"]{color:#d26c58;font-weight:650}
+.product-scan-status[data-status-type="success"]{color:#328452;font-weight:650}
