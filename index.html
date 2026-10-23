@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="scanner.css">
 </head>
 <body>
   <section class="onboarding-screen" id="onboardingScreen">
@@ -162,6 +163,80 @@
         </article>
 
         <button id="editProfileButton" class="secondary wide dashboard-edit">Промени</button>
+      </section>
+
+
+      <section class="view" id="view-products" data-title="Скенер на продукти">
+        <div class="product-hero">
+          <div class="product-hero-top"><span class="product-hero-mark">✦ NUTRIAI LAB</span><span class="product-hero-badge">НОВО · 2026</span></div>
+          <h2>Разбери какво <em>има вътре.</em></h2>
+          <p>Сканирай опаковката или потърси продукт. Виж съставките, хранителните стойности и какво заслужава внимание.</p>
+          <div class="product-hero-art" aria-hidden="true">
+            <div class="product-orbit product-orbit-one"></div><div class="product-orbit product-orbit-two"></div>
+            <div class="product-scan-frame"><i></i><i></i><i></i><i></i><span class="product-art-center">◉<small>SMART SCAN</small></span></div>
+            <span class="product-floating-chip product-chip-one">✧ Съставки</span><span class="product-floating-chip product-chip-two">◈ Nutri-Score</span>
+          </div>
+          <div class="product-hero-actions">
+            <button type="button" id="productLiveScan" class="product-cta-main"><span aria-hidden="true">▣</span> Сканирай баркод</button>
+            <label for="productPhoto" class="product-cta-secondary"><span aria-hidden="true">◉</span> Снимай опаковка</label>
+            <input id="productPhoto" type="file" accept="image/*" capture="environment" class="product-hidden-input" aria-label="Снимка на опаковка за разпознаване">
+          </div>
+          <p class="product-hero-hint">AI чете видимия етикет; липсващите данни можеш да допълниш ръчно.</p>
+        </div>
+
+        <article class="product-search-card">
+          <div class="product-section-kicker">ОТКРИЙ ПРОДУКТ</div>
+          <form id="productSearchForm" class="product-search-form" autocomplete="off">
+            <label class="product-search-input-wrap">
+              <span aria-hidden="true">⌕</span>
+              <input id="productSearchInput" type="search" maxlength="80" placeholder="Име, марка или продукт..." aria-label="Потърси продукт">
+            </label>
+            <button type="submit" class="product-search-submit">Търси</button>
+          </form>
+          <div class="product-barcode-line">
+            <label for="productBarcodeInput">Или въведи баркод</label>
+            <div><input id="productBarcodeInput" type="text" inputmode="numeric" maxlength="14" placeholder="EAN / UPC" aria-label="Баркод"><button type="button" id="productBarcodeGo">Провери →</button></div>
+          </div>
+          <p id="productScanStatus" class="product-scan-status" role="status" aria-live="polite">Готово за сканиране. Започни със снимка, баркод или търсене.</p>
+          <div id="productScanPhoto" class="product-scan-photo hidden" aria-live="polite"><img id="productScanPhotoImage" alt="Снимка на сканирания продукт"><div><strong id="productScanPhotoTitle">Снимка на продукта</strong><small id="productScanPhotoCaption">Оригиналната снимка от камерата</small></div></div>
+          <div id="productPersonalMatches" class="product-personal-matches hidden" aria-live="polite"></div>
+          <div id="productScanMatches" class="product-scan-matches" aria-live="polite"></div>
+          <div id="productNotFound" class="product-not-found">
+            <div class="product-not-found-icon" aria-hidden="true">✦</div>
+            <div class="product-not-found-copy"><strong>Не откриваш продукта?</strong><span>Създай го от етикета или използвай AI снимка. Следващия път ще го намериш по баркод.</span></div>
+            <button type="button" id="productOpenEditor">Добави продукт</button>
+          </div>
+          <section id="productEditorPanel" class="product-editor-panel hidden" aria-label="Нов продукт от етикет">
+            <div class="product-editor-header"><div><small>МОЯТА БАЗА</small><h3>Добави продукт от етикет</h3></div><button type="button" id="productEditorClose" aria-label="Затвори редактора">×</button></div>
+            <p id="productEditorNote" class="product-editor-note">Въведи само стойностите, които са посочени върху опаковката. Празните стойности остават неизвестни.</p>
+            <form id="productCustomForm" class="product-custom-form" autocomplete="off">
+              <label class="product-editor-full">Име на продукта <input name="name" maxlength="110" required placeholder="Например: вафла, марка, вкус"></label>
+              <label>Марка <input name="brand" maxlength="80" placeholder="По желание"></label>
+              <label>Баркод EAN/UPC <input name="code" inputmode="numeric" maxlength="14" pattern="[0-9]{8,14}" placeholder="8–14 цифри"></label>
+              <div class="product-editor-subtitle">Хранителни стойности за 100 г / 100 мл</div>
+              <label>Енергия (kcal) <input name="energy" inputmode="decimal" type="number" min="0" max="1000" step="any" placeholder="—"></label>
+              <label>Протеини (г) <input name="protein" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Въглехидрати (г) <input name="carbs" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Мазнини (г) <input name="fat" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Захари (г) <input name="sugar" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Фибри (г) <input name="fiber" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Наситени мазнини (г) <input name="saturated" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label>Сол (г) <input name="salt" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
+              <label class="product-editor-full">Съставки (от опаковката) <textarea name="ingredients" maxlength="2500" rows="3" placeholder="Копирай състава от етикета, ако е видим"></textarea></label>
+              <p class="product-editor-caption">Записът е личен и се съхранява в този браузър. Отбелязваме го като „Данни от етикета“, без да измисляме Nutri-Score или алергени.</p>
+              <button id="productSaveCustom" type="submit" class="product-editor-save">Запази продукта</button>
+              <p id="productEditorStatus" class="product-scan-status" aria-live="polite"></p>
+            </form>
+          </section>
+        </article>
+
+        <div id="productScanDetail" class="product-scan-detail hidden" aria-live="polite"></div>
+
+        <article class="product-recent-card">
+          <div class="product-recent-heading"><div><span class="product-section-kicker">ТВОЯТ СПИСЪК</span><h3>Последно разгледани</h3></div><span aria-hidden="true">↗</span></div>
+          <div id="productScanRecent" class="product-recent-list"><p class="product-empty">Разгледаните продукти ще се появяват тук.</p></div>
+        </article>
+        <p class="product-disclaimer">Данните от Open Food Facts са общностни и могат да са непълни. Личните продукти се пазят в браузъра. AI стойностите се проверяват по етикета. Оценката не е тест за токсичност или медицинска препоръка.</p>
       </section>
 
       <section class="view" id="view-camera" data-title="Камера за храна">
@@ -423,6 +498,7 @@
 
     <nav class="tabbar" aria-label="Основна навигация">
       <button class="tab active" data-view="dashboard"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>Днес</button>
+      <button class="tab tab-scanner" data-view="products" aria-label="Скенер на продукти"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2M4 12h16M8 9v6M12 9v6M16 9v6"/></svg></span>Скенер</button>
       <button class="tab" data-view="camera"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg></span>Камера</button>
       <button class="tab" data-view="progress"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span>Прогрес</button>
       <button class="tab" data-view="history"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>История</button>
@@ -431,5 +507,7 @@
   </div>
 
   <script src="app.js"></script>
+  <script src="scanner.js"></script>
+  <script src="scanner-personal.js"></script>
 </body>
 </html>

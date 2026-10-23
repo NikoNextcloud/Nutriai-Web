@@ -1765,7 +1765,7 @@ async function lookupBarcodeProduct(code) {
   status.textContent = "Търся продукта...";
   try {
     const data = await fetchFoodDatabase({ barcode: code });
-    if (!data.product) throw new Error("Продуктът не е намерен.");
+    if (data.status === 0 || !data.product) throw new Error("Този баркод не е намерен в Open Food Facts. Опитай по име или провери цифрите.");
     const product = data.product;
     const nutrients = product.nutriments || {};
     $("manualName").value = product.product_name_bg || product.product_name || product.generic_name || "Продукт";
@@ -1777,8 +1777,17 @@ async function lookupBarcodeProduct(code) {
     $("manualFiber").value = Number(nutrients.fiber_100g) || 0;
     updateManualNutritionPreview();
     status.textContent = "Данните за продукта са заредени. Провери етикета преди запис.";
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-product", {
+      detail: { barcode: code, product, capturedImage: window.nutriaiBarcodeFrame || "" }
+    }));
+    window.nutriaiBarcodeFrame = "";
   } catch (error) {
     status.textContent = error.message || "Не успях да заредя продукта.";
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
+      detail: { barcode: code, message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
+    }));
+  } finally {
+    window.nutriaiBarcodeFrame = "";
   }
 }
 
@@ -1817,35 +1826,54 @@ async function searchWorldFoods(event) {
 }
 
 async function fetchFoodDatabase({ query = "", barcode = "" }) {
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_front_small_url,nutriments,serving_quantity";
-  const localParams = barcode ? `barcode=${encodeURIComponent(barcode)}` : `query=${encodeURIComponent(query)}`;
+  const fields = "code,product_name,product_name_bg,generic_name,brands,image_url,image_front_url,image_front_small_url,image_small_url,selected_images,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,quantity";
+  const localParams = barcode ? "barcode=" + encodeURIComponent(barcode) : "query=" + encodeURIComponent(query);
   const directPath = barcode
-    ? `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${encodeURIComponent(fields)}`
-    : `/cgi/search.pl?action=process&search_terms=${encodeURIComponent(query)}&search_simple=1&json=1&page_size=12&fields=${encodeURIComponent(fields)}`;
+    ? "/api/v2/product/" + encodeURIComponent(barcode) + ".json?fields=" + encodeURIComponent(fields)
+    : "/cgi/search.pl?action=process&search_terms=" + encodeURIComponent(query) + "&search_simple=1&json=1&page_size=12&fields=" + encodeURIComponent(fields);
   const urls = [
-    `/api/foods?${localParams}`,
-    `https://world.openfoodfacts.org${directPath}`,
-    `https://bg.openfoodfacts.org${directPath}`
+    "/api/foods?" + localParams,
+    "https://world.openfoodfacts.org" + directPath,
+    "https://bg.openfoodfacts.org" + directPath
   ];
 
-  let lastError;
+  let lastError = null;
+  let proxyError = null;
   for (const url of urls) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), url.startsWith("/api/") ? 10500 : 6500);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-      const response = await fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal });
-      clearTimeout(timeout);
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal
+      });
       const contentType = response.headers.get("content-type") || "";
-      if (!response.ok || !contentType.includes("json")) throw new Error("Източникът не отговори коректно.");
-      return await response.json();
+      const data = contentType.includes("json") ? await response.json().catch(() => null) : null;
+      if (response.status === 404 && barcode) return { status: 0, product: null };
+      if (!response.ok) {
+        const error = new Error(
+          data?.error || (response.status === 429
+            ? "Хранителната база временно ограничава заявките. Опитай отново след минута."
+            : "Сървърът на хранителната база върна грешка " + response.status + ".")
+        );
+        if (url.startsWith("/api/")) proxyError = error;
+        lastError = error;
+        continue;
+      }
+      if (!data || typeof data !== "object") {
+        lastError = new Error("Хранителната база не върна валиден отговор.");
+        continue;
+      }
+      return data;
     } catch (error) {
-      lastError = error;
+      lastError = error?.name === "AbortError"
+        ? new Error("Връзката с хранителната база се забави. Опитай отново.")
+        : error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
-
-  throw new Error(lastError?.name === "AbortError"
-    ? "Търсенето отне твърде дълго. Опитайте отново."
-    : "Няма връзка с хранителната база. Проверете интернет връзката и опитайте отново.");
+  throw new Error(proxyError?.message || lastError?.message || "Хранителната база временно не отговаря.");
 }
 
 function normalizeWorldFood(product) {
@@ -2008,6 +2036,7 @@ function exportNutriData() {
     meals: state.meals,
     weights: state.weights,
     favorites: state.favorites,
+    customProducts: window.NutriAICustomProducts?.all() || [],
     reminders: state.reminders,
     water: state.water
   };
@@ -2038,8 +2067,12 @@ async function importNutriData(event) {
       save("nutriai.weights", state.weights),
       save("nutriai.favorites", state.favorites),
       save("nutriai.reminders", state.reminders),
-      save("nutriai.water", state.water)
+      save("nutriai.water", state.water),
+      ...(Array.isArray(data.customProducts) ? [save("nutriai.customProducts.v1", data.customProducts)] : [])
     ]);
+    if (Array.isArray(data.customProducts)) {
+      window.dispatchEvent(new CustomEvent("nutriai:personal-catalog-reloaded", { detail: { products: data.customProducts } }));
+    }
     hydrateReminderForm();
     renderFavorites();
     renderAll();
@@ -2431,6 +2464,10 @@ async function startLiveBarcodeScanner() {
       }
       status.textContent = "Баркодът е разпознат: " + rawValue;
       $("barcodeValue").value = rawValue;
+      window.nutriaiBarcodeFrame = captureBarcodeFrame(video);
+      window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
+        detail: { barcode: rawValue, capturedImage: window.nutriaiBarcodeFrame }
+      }));
       stopLiveBarcodeScanner();
       $("barcodeStatus").textContent = "Зареждам продукта...";
       await lookupBarcodeProduct(rawValue);
@@ -2441,6 +2478,22 @@ async function startLiveBarcodeScanner() {
     status.textContent = error?.name === "NotAllowedError"
       ? "Камерата не е разрешена. Разреши достъпа от настройките на браузъра."
       : "Камерата не можа да се стартира. Опитай от защитената Vercel страница.";
+  }
+}
+
+
+function captureBarcodeFrame(video) {
+  if (!video || !video.videoWidth || !video.videoHeight) return "";
+  try {
+    const limit = 720;
+    const scale = Math.min(1, limit / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.72);
+  } catch {
+    return "";
   }
 }
 
