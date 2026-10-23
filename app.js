@@ -1777,6 +1777,10 @@ async function lookupBarcodeProduct(code) {
     $("manualFiber").value = Number(nutrients.fiber_100g) || 0;
     updateManualNutritionPreview();
     status.textContent = "Данните за продукта са заредени. Провери етикета преди запис.";
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-product", {
+      detail: { barcode: code, product, capturedImage: window.nutriaiBarcodeFrame || "" }
+    }));
+    window.nutriaiBarcodeFrame = "";
   } catch (error) {
     status.textContent = error.message || "Не успях да заредя продукта.";
   }
@@ -1817,7 +1821,7 @@ async function searchWorldFoods(event) {
 }
 
 async function fetchFoodDatabase({ query = "", barcode = "" }) {
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_front_small_url,nutriments,serving_quantity";
+  const fields = "code,product_name,product_name_bg,generic_name,brands,image_url,image_front_url,image_front_small_url,image_small_url,selected_images,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,quantity";
   const localParams = barcode ? `barcode=${encodeURIComponent(barcode)}` : `query=${encodeURIComponent(query)}`;
   const directPath = barcode
     ? `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${encodeURIComponent(fields)}`
@@ -2431,6 +2435,7 @@ async function startLiveBarcodeScanner() {
       }
       status.textContent = "Баркодът е разпознат: " + rawValue;
       $("barcodeValue").value = rawValue;
+      window.nutriaiBarcodeFrame = captureBarcodeFrame(video);
       stopLiveBarcodeScanner();
       $("barcodeStatus").textContent = "Зареждам продукта...";
       await lookupBarcodeProduct(rawValue);
@@ -2441,6 +2446,22 @@ async function startLiveBarcodeScanner() {
     status.textContent = error?.name === "NotAllowedError"
       ? "Камерата не е разрешена. Разреши достъпа от настройките на браузъра."
       : "Камерата не можа да се стартира. Опитай от защитената Vercel страница.";
+  }
+}
+
+
+function captureBarcodeFrame(video) {
+  if (!video || !video.videoWidth || !video.videoHeight) return "";
+  try {
+    const limit = 720;
+    const scale = Math.min(1, limit / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.72);
+  } catch {
+    return "";
   }
 }
 
