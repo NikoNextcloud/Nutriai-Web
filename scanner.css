@@ -195,3 +195,72 @@
 .product-product-image-note {font-size:.68rem;color:var(--muted);margin:8px 0 0}
 .product-scan-status[data-status-type="error"]{color:#d26c58;font-weight:650}
 .product-scan-status[data-status-type="success"]{color:#328452;font-weight:650}
+
+
+/* Personal-label fallback: local products are visibly different from Open Food Facts records. */
+.product-not-found {
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr);
+  align-items: center;
+  gap: 10px 11px;
+  margin-top: 14px;
+  padding: 15px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--line));
+  background: color-mix(in srgb, var(--green) 8%, var(--card));
+}
+.product-not-found-active {
+  border-color: color-mix(in srgb, var(--green) 70%, var(--line));
+  background: color-mix(in srgb, var(--green) 13%, var(--card));
+}
+.product-not-found-icon {
+  background: color-mix(in srgb, var(--green) 17%, var(--card));
+  color: var(--green);
+  display: grid;
+  place-items: center;
+  width: 38px;height: 38px;
+  border-radius: 13px;font-size: 1.4rem;
+}
+.product-not-found-copy {display:grid;gap:5px;min-width:0}
+.product-not-found-copy strong {font-size:.79rem;color:var(--text)}
+.product-not-found-copy span {font-size:.7rem;line-height:1.5;color:var(--muted)}
+#productOpenEditor {
+  grid-column: 1/-1;
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--green) 45%, var(--line));
+  border-radius: 12px;min-height:43px;
+  color: var(--text);font-weight:750;font-size:.78rem;
+}
+.product-editor-panel {
+  margin-top:14px;padding:16px;
+  border-radius:19px;
+  background:var(--card);
+  border:1px solid color-mix(in srgb,var(--green) 22%,var(--line));
+  box-shadow:0 12px 30px rgba(0,0,0,.04);
+}
+.product-editor-header {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.product-editor-header small {font-size:.6rem;letter-spacing:.12em;font-weight:800;color:var(--green)}
+.product-editor-header h3 {font-size:1.07rem;margin:6px 0 0;color:var(--text)}
+#productEditorClose {flex-shrink:0;width:35px;height:35px;background:var(--card-2);color:var(--text);border-radius:50%;font-size:1.3rem}
+.product-editor-note {color:var(--muted);font-size:.73rem;line-height:1.6;margin:0 0 15px}
+.product-custom-form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.product-custom-form label {font-size:.73rem;color:var(--muted);line-height:1.35;min-width:0}
+.product-custom-form input,.product-custom-form textarea {font-size:.82rem;min-width:0;max-width:100%;background:var(--card-2)}
+.product-custom-form textarea {min-height:80px;resize:vertical;padding:10px 12px;border:1px solid var(--line);border-radius:12px;color:var(--text)}
+.product-editor-full,.product-editor-subtitle,.product-editor-caption,.product-editor-save,#productEditorStatus{grid-column:1/-1}
+.product-editor-subtitle {font-size:.69rem;font-weight:750;letter-spacing:.02em;color:var(--text);border-top:1px solid var(--line);padding-top:11px}
+.product-editor-caption {font-size:.66rem;color:var(--muted);line-height:1.5;margin:1px 0}
+.product-editor-save {background:var(--green);color:#fff;min-height:47px;border-radius:13px;font-size:.84rem;font-weight:800}
+.product-editor-save:disabled {opacity:.6}
+.product-personal-matches {margin-top:14px;display:grid;gap:7px}
+.product-personal-head {display:flex;justify-content:space-between;color:var(--green);font-size:.67rem;font-weight:800;letter-spacing:.1em;margin-bottom:2px}
+.product-personal-head small {color:var(--muted);font-size:.64rem;letter-spacing:0}
+.product-personal-result {width:100%;display:flex;align-items:center;text-align:left;gap:11px;border:1px solid var(--line);background:var(--card-2);color:var(--text);border-radius:13px;padding:9px}
+.product-personal-result img,.product-personal-image-fallback {width:48px;height:48px;border-radius:9px;background:var(--card);object-fit:contain;flex-shrink:0;display:grid;place-items:center}
+.product-personal-result>span:nth-child(2){display:grid;gap:3px;flex:1;min-width:0}
+.product-personal-result strong {font-size:.77rem}
+.product-personal-result small {font-size:.65rem;color:var(--muted)}
+.product-personal-result>span:last-child{color:var(--green);font-size:1.12rem}
+.product-self-sourced {font-size:.69rem;font-weight:700;color:var(--green);background:color-mix(in srgb,var(--green) 12%,var(--card));border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}
+#productEditSaved {width:100%;border-radius:12px;min-height:40px;margin-top:10px;background:var(--card-2);color:var(--text);border:1px solid var(--line);font-weight:750}
+@media(max-width:360px){.product-editor-panel{padding:11px}.product-custom-form{gap:9px}.product-not-found{padding:11px}}
