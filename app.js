@@ -1783,6 +1783,11 @@ async function lookupBarcodeProduct(code) {
     window.nutriaiBarcodeFrame = "";
   } catch (error) {
     status.textContent = error.message || "Не успях да заредя продукта.";
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
+      detail: { barcode: code, message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
+    }));
+  } finally {
+    window.nutriaiBarcodeFrame = "";
   }
 }
 
@@ -2436,6 +2441,9 @@ async function startLiveBarcodeScanner() {
       status.textContent = "Баркодът е разпознат: " + rawValue;
       $("barcodeValue").value = rawValue;
       window.nutriaiBarcodeFrame = captureBarcodeFrame(video);
+      window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
+        detail: { barcode: rawValue, capturedImage: window.nutriaiBarcodeFrame }
+      }));
       stopLiveBarcodeScanner();
       $("barcodeStatus").textContent = "Зареждам продукта...";
       await lookupBarcodeProduct(rawValue);
