@@ -9,7 +9,7 @@
   const recent = (() => { try { const items=JSON.parse(localStorage.getItem(storeKey)||"[]"); return Array.isArray(items)?items.slice(0,12):[]; } catch {return [];} })();
   let found=[], active=null, lastRequest=0, processing=false;
   let capturePhoto = "", captureLabel = "", pendingBarcodeFromScanner = false;
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_front_url,image_front_small_url,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,ingredients_analysis_tags,categories_tags,quantity";
+  const fields = "code,product_name,product_name_bg,generic_name,brands,image_url,image_small_url,image_front_url,image_front_small_url,selected_images,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,ingredients_analysis_tags,categories_tags,quantity";
   const status = (message, type="") => { const target=el("productScanStatus"); if(target){target.textContent=message;target.dataset.statusType=type;} };
   const validCapture = data => /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(data||"") && data.length < 2_500_000;
   function setCapture(data, label) {
@@ -27,7 +27,19 @@
     if(preview)preview.classList.add("hidden");
     const image=el("productScanPhotoImage");if(image)image.removeAttribute("src");
   }
-  const img = url => /^https:\/\/[a-z0-9.-]+\/.+/i.test(String(url||"")) ? safe(url) : "";
+  const img = value => {
+    try {
+      const url = new URL(String(value || ""));
+      return url.protocol === "https:" && (url.hostname === "openfoodfacts.org" || url.hostname.endsWith(".openfoodfacts.org"))
+        && !url.username && !url.password ? url.href : "";
+    } catch { return ""; }
+  };
+  async function timedFetch(url, options, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try { return await fetch(url, { ...options, signal: controller.signal }); }
+    finally { clearTimeout(timer); }
+  }
   function product(raw) {
     const n=raw.nutriments||{};
     return {
@@ -58,7 +70,7 @@
   }
   function photo(p,cls="") {
     const url=img(p.image);
-    return url ? '<img class="'+safe(cls)+'" src="'+url+'" alt="Снимка на продукта" loading="lazy" referrerpolicy="no-referrer">'
+    return url ? '<img class="'+safe(cls)+'" src="'+safe(url)+'" alt="Снимка на продукта" loading="lazy" referrerpolicy="no-referrer">'
       : '<div class="'+safe(cls)+' product-photo-placeholder" aria-label="Няма снимка за продукта">◈</div>';
   }
   function detailPhoto(p) {
@@ -116,7 +128,7 @@
     const endpoint="/api/foods?"+new URLSearchParams(args);
     let lastError=new Error("Неуспешна заявка към базата.");
     try {
-      const res=await fetch(endpoint,{headers:{Accept:"application/json"},signal:AbortSignal.timeout(9000)});
+      const res=await timedFetch(endpoint,{headers:{Accept:"application/json"}},9000);
       const data=await res.json().catch(()=>({}));
       if(res.ok)return data;
       if(res.status===404&&barcode)return {status:0,product:null};
@@ -132,7 +144,7 @@
       : "/cgi/search.pl?action=process&search_terms="+encodeURIComponent(query)+"&search_simple=1&json=1&page_size=12&fields="+encodeURIComponent(fields);
     for(const host of ["https://world.openfoodfacts.org","https://bg.openfoodfacts.org"]) {
       try {
-        const res=await fetch(host+path,{headers:{Accept:"application/json"},signal:AbortSignal.timeout(6500)});
+        const res=await timedFetch(host+path,{headers:{Accept:"application/json"}},6500);
         if(res.status===429)throw Object.assign(new Error("Хранителната база е временно ограничена. Опитай отново след минута."),{rateLimited:true});
         if(!res.ok)continue;
         const data=await res.json();
@@ -141,7 +153,7 @@
         if(error.rateLimited)throw error;
       }
     }
-    throw lastError.name==="TimeoutError"
+    throw ["TimeoutError", "AbortError"].includes(lastError.name)
       ? new Error("Търсенето се забави. Провери връзката и опитай отново.")
       : lastError;
   }
