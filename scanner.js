@@ -63,8 +63,9 @@
     };
   }
   function persist(item) {
-    if(!item.code)return;
-    const idx=recent.findIndex(p=>p.code===item.code);
+    const identity=item.code || (item.source==="personal"?item.id:"");
+    if(!identity)return;
+    const idx=recent.findIndex(p=>(p.code||(p.source==="personal"?p.id:""))===identity);
     if(idx>=0)recent.splice(idx,1);
     recent.unshift(item);recent.length=Math.min(recent.length,12);
     try { localStorage.setItem(storeKey,JSON.stringify(recent)); } catch {}
