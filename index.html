@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="scanner.css?v=20261026">
+  <link rel="stylesheet" href="scanner.css?v=20261026b">
 </head>
 <body>
   <section class="onboarding-screen" id="onboardingScreen">
@@ -181,7 +181,7 @@
             <label for="productPhoto" class="product-cta-secondary"><span aria-hidden="true">◉</span> Снимай опаковка</label>
             <input id="productPhoto" type="file" accept="image/*" capture="environment" class="product-hidden-input" aria-label="Снимка на опаковка за разпознаване">
           </div>
-          <p class="product-hero-hint">AI чете видимия етикет; липсващите данни можеш да допълниш ръчно.</p>
+          <p class="product-hero-hint">Сканирай продукта и виж калории, хранителна оценка, съставки и кои показатели да следиш.</p>
         </div>
 
         <article class="product-search-card">
@@ -213,6 +213,13 @@
               <label class="product-editor-full">Име на продукта <input name="name" maxlength="110" required placeholder="Например: вафла, марка, вкус"></label>
               <label>Марка <input name="brand" maxlength="80" placeholder="По желание"></label>
               <label>Баркод EAN/UPC <input name="code" inputmode="numeric" maxlength="14" pattern="[0-9]{8,14}" placeholder="8–14 цифри"></label>
+              <label class="product-editor-full">Какъв тип е продуктът?
+                <select name="productType" aria-label="Храна или напитка">
+                  <option value="unknown">Не е уточнено (без ориентировъчна оценка)</option>
+                  <option value="food">Храна — стойности за 100 г</option>
+                  <option value="drink">Напитка — стойности за 100 мл</option>
+                </select>
+              </label>
               <div class="product-editor-subtitle">Хранителни стойности за 100 г / 100 мл</div>
               <label>Енергия (kcal) <input name="energy" inputmode="decimal" type="number" min="0" max="1000" step="any" placeholder="—"></label>
               <label>Протеини (г) <input name="protein" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="—"></label>
@@ -236,7 +243,7 @@
           <div class="product-recent-heading"><div><span class="product-section-kicker">ТВОЯТ СПИСЪК</span><h3>Последно разгледани</h3></div><span aria-hidden="true">↗</span></div>
           <div id="productScanRecent" class="product-recent-list"><p class="product-empty">Разгледаните продукти ще се появяват тук.</p></div>
         </article>
-        <p class="product-disclaimer">Данните от Open Food Facts са общностни и могат да са непълни. Личните продукти се пазят в браузъра. AI стойностите се проверяват по етикета. Оценката не е тест за токсичност или медицинска препоръка.</p>
+        <p class="product-disclaimer">Данните от Open Food Facts са общностни и може да са непълни. Скàлата 0–10 е визуален ориентир, не измерва токсичност. Проверявай етикета, порцията и алергените. Личните продукти се пазят в твоя браузър.</p>
       </section>
 
       <section class="view" id="view-camera" data-title="Камера за храна">
@@ -517,7 +524,8 @@
 
   <script src="barcode-engine.js?v=20261026"></script>
   <script src="app.js?v=20261026"></script>
-  <script src="scanner.js?v=20261026"></script>
+  <script src="nutrition-insights.js?v=20261026b"></script>
+  <script src="scanner.js?v=20261026b"></script>
   <script src="scanner-personal.js"></script>
 </body>
 </html>
