@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="scanner.css">
+  <link rel="stylesheet" href="scanner.css?v=20261026">
 </head>
 <body>
   <section class="onboarding-screen" id="onboardingScreen">
@@ -441,7 +441,16 @@
           <video id="barcodeVideo" autoplay playsinline muted></video>
           <div class="barcode-guide"><span></span></div>
         </div>
-        <p id="liveBarcodeStatus" class="status-line">Камерата се стартира...</p>
+        <p id="liveBarcodeStatus" class="status-line" role="status" aria-live="polite">Камерата се стартира...</p>
+        <div class="barcode-scanner-actions">
+          <label for="barcodeImage" class="barcode-image-button">📷 Снимай баркода</label>
+          <input id="barcodeImage" class="barcode-upload-input" type="file" accept="image/*" capture="environment" aria-label="Снимай или избери снимка на баркод">
+          <div class="barcode-manual-lookup">
+            <input id="barcodeModalValue" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="EAN / UPC цифри" aria-label="Въведи цифрите на баркода">
+            <button id="barcodeModalLookup" type="button">Провери</button>
+          </div>
+          <small>Ако камерата не го разчита, снимай линиите отблизо или въведи цифрите под тях.</small>
+        </div>
       </div>
     </div>
 
@@ -506,8 +515,9 @@
     </nav>
   </div>
 
-  <script src="app.js"></script>
-  <script src="scanner.js"></script>
+  <script src="barcode-engine.js?v=20261026"></script>
+  <script src="app.js?v=20261026"></script>
+  <script src="scanner.js?v=20261026"></script>
   <script src="scanner-personal.js"></script>
 </body>
 </html>

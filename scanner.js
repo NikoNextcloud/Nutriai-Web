@@ -172,16 +172,22 @@
     status("Проверявам продукта по EAN...");
     el("productScanMatches").innerHTML="";
     el("productScanDetail").classList.add("hidden");
-    const own=personal()?.findBarcode(code);
+    const variants=window.NutriAIBarcodeEngine?.variants(code)||[code];
+    const own=variants.map(value=>personal()?.findBarcode(value)).find(Boolean);
     if(own){
       if(id!==lastRequest)return false;
       show(own);status("Продуктът е намерен в твоята лична база.","success");
       return true;
     }
     try {
-      const data=await getData({barcode:code});
+      let data=null;
+      for(const variant of variants){
+        data=await getData({barcode:variant});
+        if(id!==lastRequest)return false;
+        if(data?.product && data.status!==0)break;
+      }
       if(id!==lastRequest)return false;
-      if(!data.product || data.status===0) {
+      if(!data?.product || data.status===0) {
         personal()?.showNoMatch({code,photo:capturePhoto});
         status("Този EAN липсва в Open Food Facts. Можеш да добавиш продукта от етикет или AI снимка.","error");
         return false;
@@ -191,7 +197,7 @@
       return true;
     } catch(e) {
       if(id!==lastRequest)return false;
-      const offline=recent.find(p=>p.code===code);
+      const offline=recent.find(p=>variants.includes(p.code));
       if(offline){
         show(offline);
         status("Базата не отговаря — показвам предишните данни за този продукт.");
@@ -343,7 +349,10 @@
       const own=personal()?.findBarcode(code);
       if(own) {show(own);status("Продуктът е намерен в твоята база.","success");return;}
       personal()?.showNoMatch({code,photo:capturePhoto,error:e.detail?.message||""});
-      status("Не е намерен запис за този EAN. Добави данни от етикета или AI снимка.","error");
+      status(code
+        ? "Баркодът е разчетен, но продуктът липсва в каталога. Добави го от етикета."
+        : "Баркодът не се разчита от тази снимка. Опитай отблизо или въведи цифрите под линиите.",
+        "error");
     });
     el("productScanDetail").addEventListener("error",event=>{
       const image=event.target;
