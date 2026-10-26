@@ -44,6 +44,9 @@
   }
   function product(raw) {
     const n=raw.nutriments||{};
+    const categories=Array.isArray(raw.categories_tags)?raw.categories_tags:[];
+    const drinkTags=/^(en|bg|fr):.*(beverages|drinks|fruit-juices|soft-drinks|fruit-nectars|water|milks|drinkable-yogurts|coffees|teas|smoothies|energy-drinks|plant-based-beverages)/i;
+    const isDrink=categories.length ? categories.some(tag=>drinkTags.test(tag)) : null;
     return {
       code:String(raw.code||"").replace(/\D/g,""), name:String(raw.product_name_bg||raw.product_name||raw.generic_name||"Неизвестен продукт").trim(),
       brand:String(raw.brands||""), image:img(
@@ -59,7 +62,7 @@
       ingredients:String(raw.ingredients_text_bg||raw.ingredients_text||""),
       allergens:Array.isArray(raw.allergens_tags)?raw.allergens_tags.map(x=>x.split(":").pop().replaceAll("-"," ")):[],
       additives:Array.isArray(raw.additives_tags)?raw.additives_tags.map(x=>x.split(":").pop().toUpperCase()):[],
-      quantity:String(raw.quantity||"")
+      quantity:String(raw.quantity||""), isDrink
     };
   }
   function persist(item) {
@@ -85,49 +88,133 @@
   function renderRecent() {
     el("productScanRecent").innerHTML=recent.length?recent.map((p,i)=>'<button class="product-recent-item" type="button" data-recent="'+i+'">'+photo(p,"product-recent-photo")+'<span><strong>'+safe(p.name)+'</strong><small>'+safe(p.brand||p.code||"Продукт")+'</small></span><span class="product-recent-arrow">↗</span></button>').join(""):'<p class="product-empty">Разгледаните продукти ще се появяват тук.</p>';
   }
-  function interpret(p) {
-    const cautions=[];
-    if(p.sugar!==null && p.sugar>22.5)cautions.push(["Високо съдържание на захар",numberLabel(p.sugar)+" на 100 г"]);
-    if(p.salt!==null && p.salt>1.5)cautions.push(["Високо съдържание на сол",numberLabel(p.salt)+" на 100 г"]);
-    if(p.saturated!==null && p.saturated>5)cautions.push(["Високо съдържание на наситени мазнини",numberLabel(p.saturated)+" на 100 г"]);
-    if(p.nova===4)cautions.push(["Ултрапреработен продукт","NOVA 4 — характеристика на преработката"]);
-    if(p.fiber!==null && p.fiber>=6)cautions.push(["Добър източник на фибри",numberLabel(p.fiber)+" на 100 г"]);
-    return cautions;
+  function compactNumber(value, unit) {
+    if(value === null || value === undefined || !Number.isFinite(Number(value))) return '<span class="product-metric-empty">—</span>';
+    const number=Number(value), formatted=number.toLocaleString("bg-BG",{
+      maximumFractionDigits:unit==="kcal"?0:1
+    });
+    return '<strong>'+safe(formatted)+'</strong><small>'+safe(unit)+'</small>';
   }
-  function scoreHTML(p) {
-    if(!p.score)return '<div class="product-score-missing"><strong>Няма Nutri-Score</strong><span>Оценката не е налична в базата. Не извеждаме измислен рейтинг.</span></div>';
-    const palette={A:"#15935d",B:"#75a841",C:"#ddbb38",D:"#e38b32",E:"#d75a4f"};
-    return '<div class="product-score-core" style="--product-score-color:'+palette[p.score]+'"><div class="product-score-letter">'+p.score+'</div><div><small>ХРАНИТЕЛНА ОЦЕНКА</small><strong>Nutri-Score '+p.score+'</strong><span>Сравнителен показател за хранителен състав, не тест за безопасност</span></div></div>';
+  function renderMetricTiles(p, assessment) {
+    const tiles=[
+      ["🔥","Калории",p.energy,"kcal","energy"],
+      ["🥩","Протеини",p.protein,"г","protein"],
+      ["🍞","Въглехидрати",p.carbs,"г","carbs"],
+      ["🥑","Мазнини",p.fat,"г","fat"],
+      ["🍬","Захари",p.sugar,"г","sugar"],
+      ["🌾","Фибри",p.fiber,"г","fiber"]
+    ];
+    return '<div class="product-quick-metrics" role="list" aria-label="Хранителни стойности за '+safe(assessment.unit)+'">'+
+      tiles.map(([emoji,label,value,unit,tone])=>
+        '<div class="product-quick-tile product-quick-'+tone+'" role="listitem">'+
+          '<span class="product-quick-emoji" aria-hidden="true">'+emoji+'</span>'+
+          '<span class="product-quick-number">'+compactNumber(value,unit)+'</span>'+
+          '<span class="product-quick-label">'+safe(label)+'</span>'+
+        '</div>'
+      ).join("")+'</div>';
   }
-  function metric(icon,title,value,klass="") {return '<div class="product-nutrient '+klass+'"><span>'+icon+' '+safe(title)+'</span><strong>'+numberLabel(value)+'</strong></div>';}
+  function renderHealthPanel(p, assessment) {
+    const metric=assessment.score===null?'—':assessment.score.toFixed(1);
+    const badge=assessment.grade
+      ? '<span class="product-health-flag product-health-nutri">Nutri-Score '+safe(assessment.grade)+'</span>'
+      : assessment.source==="label"
+        ? '<span class="product-health-flag product-health-estimate">Оценка от етикет</span>'
+        : '<span class="product-health-flag product-health-unknown">Няма Nutri-Score</span>';
+    const nova=p.nova
+      ? '<span class="product-health-flag product-health-nova">NOVA '+Number(p.nova)+'/4</span>'
+      : '<span class="product-health-flag product-health-unknown">NOVA: няма данни</span>';
+    const shortSource=assessment.source==="nutriscore"?"По Nutri-Score":
+      assessment.source==="label"?"Ориентир от хранителния етикет":"Няма достатъчно потвърдени показатели";
+    return '<section class="product-health-result health-'+safe(assessment.tone)+'" aria-label="Оценка на хранителния профил">'+
+      '<div class="product-health-heading"><span>✦ ХРАНИТЕЛЕН ПРОФИЛ</span><small>За лесно сравнение</small></div>'+
+      '<div class="product-health-body">'+
+        '<div class="product-health-ring" style="--health-percent:'+assessment.scorePercent+'%">'+
+          '<div class="product-health-ring-core"><strong>'+safe(metric)+'</strong><small>/10</small></div>'+
+        '</div>'+
+        '<div class="product-health-message"><h3>'+safe(assessment.title)+'</h3>'+
+          '<p>'+safe(assessment.subtitle)+'</p>'+
+          '<div class="product-health-progress" aria-hidden="true"><span style="width:'+assessment.scorePercent+'%"></span></div>'+
+          '<small>'+safe(shortSource)+'</small>'+
+        '</div>'+
+      '</div>'+
+      '<div class="product-health-flags">'+badge+nova+'</div>'+
+      '<details class="product-health-method"><summary>Как се изчислява оценката?</summary><p>'+safe(assessment.method)+'</p></details>'+
+      '<p class="product-health-safety-note">Не е оценка за токсичност или медицинска препоръка. Размерът на порцията и цялостното хранене имат значение.</p>'+
+    '</section>';
+  }
+  function renderSignals(assessment) {
+    const entries=[
+      ...assessment.warn.map(x=>({...x,severity:"warn"})),
+      ...assessment.good.map(x=>({...x,severity:"good"})),
+      ...assessment.neutral.slice(0,3).map(x=>({...x,severity:"neutral"}))
+    ];
+    const cards=entries.map(x=>
+      '<div class="product-insight product-insight-'+x.severity+'">'+
+        '<div class="product-insight-icon" aria-hidden="true">'+x.icon+'</div>'+
+        '<div class="product-insight-copy"><strong>'+safe(x.label)+'</strong><small>'+safe(x.detail)+'</small></div>'+
+        '<span class="product-insight-dot" aria-hidden="true"></span>'+
+      '</div>').join("");
+    return '<section class="product-panel product-insights-panel">'+
+      '<div class="product-panel-head"><h3>Какво да знаеш?</h3><span>По данните от етикета</span></div>'+
+      (cards||'<div class="product-insights-empty">Няма откроени сигнали в наличните данни. Това не означава, че продуктът е безрисков.</div>')+
+    '</section>';
+  }
+  function renderAdditionalNutrition(p, assessment) {
+    const rows=[
+      ["Наситени мазнини",p.saturated,"г"],
+      ["Сол",p.salt,"г"],
+      ["Захари",p.sugar,"г"],
+      ["Фибри",p.fiber,"г"]
+    ];
+    return '<section class="product-panel product-additional-panel">'+
+      '<div class="product-panel-head"><h3>Хранителни стойности</h3><span>за '+safe(assessment.unit)+'</span></div>'+
+      '<div class="product-more-values">'+rows.map(([name,val,unit])=>
+        '<div><span>'+safe(name)+'</span><strong>'+(val===null||val===undefined?"Няма данни":safe(numberLabel(val,unit)))+'</strong></div>'
+      ).join("")+'</div>'+
+      '<p class="product-label-note">Показаните стойности са за 100 г или 100 мл според вида на продукта, а не за цялата опаковка.</p>'+
+    '</section>';
+  }
   function renderDetail(p) {
     active=p;
-    const warnings=interpret(p);
+    const assessment=window.NutriAIInsights?.assess(p)||{
+      score:null,scorePercent:0,grade:null,source:"unknown",tone:"unknown",
+      title:"Няма оценка",subtitle:"Не може да се изчисли",unit:"100 г/мл",
+      method:"Няма достатъчно данни.",warn:[],good:[],neutral:[]
+    };
     const personalRecord=p.source==="personal";
-    const visualSource=p.source==="personal"?"Ваша снимка / данни от етикета":p.image?"Снимка от Open Food Facts":capturePhoto?captureLabel:"Няма изображение в базата";
-    const visual='<div class="product-identity-visual">'+detailPhoto(p)+'<small class="product-identity-visual-caption">'+safe(visualSource)+'</small></div>';
-    const otherPhoto=p.image && capturePhoto
-      ? '<div class="product-identity-scan-photo"><img src="'+safe(capturePhoto)+'" alt="Вашата снимка от сканирането"><span>'+safe(captureLabel)+'</span></div>'
+    const hasOwnImage=personalRecord&&validOwnPhoto(p.imageData);
+    const visualSource=hasOwnImage?"Моя снимка":p.image?"Снимка от Open Food Facts":capturePhoto?captureLabel:"Няма снимка";
+    const visual='<div class="product-quick-photo">'+detailPhoto(p)+
+      '<small>'+safe(visualSource)+'</small></div>';
+    const otherPhoto=(p.image||hasOwnImage)&&capturePhoto
+      ? '<div class="product-identity-scan-photo"><img src="'+safe(capturePhoto)+'" alt="Заснетият продукт"><span>'+safe(captureLabel)+'</span></div>'
       : "";
-    const pills=warnings.map(([name,detail])=>'<div class="product-notice"><span class="product-notice-dot" aria-hidden="true"></span><div><strong>'+safe(name)+'</strong><small>'+safe(detail)+'</small></div></div>').join("");
-    el("productScanDetail").innerHTML=
-      '<div class="product-detail-top"><span class="product-section-kicker">ПРОДУКТОВ ПАСПОРТ</span><button id="productDetailClose" class="product-detail-close" type="button" aria-label="Затвори">×</button></div>'+
-      '<div class="product-identity">'+visual+'<div class="product-identity-productname"><p>'+safe(p.brand||"Продукт")+'</p><h2>'+safe(p.name)+'</h2><small>'+safe(p.quantity||"")+" · "+safe(p.code||"Няма баркод")+'</small></div></div>'+otherPhoto+
-      (personalRecord ? '<div class="product-self-sourced">✦ Личен продукт — стойностите са въведени или потвърдени от етикета. Не са проверени от Open Food Facts.</div>' : '')+
-      '<div class="product-rating-panel">'+scoreHTML(p)+'<div class="product-nova">Степен на преработка: <strong>'+(p.nova ? "NOVA "+p.nova : "няма данни")+'</strong></div></div>'+
-      '<div class="product-panel"><div class="product-panel-head"><h3>Хранителни стойности</h3><span>за 100 г / мл според етикета</span></div>'+
-      '<div class="product-calorie-bar"><span>⚡ Енергия</span><strong>'+(p.energy===null?"Няма данни":Math.round(p.energy)+" kcal")+'</strong></div>'+
-      '<div class="product-nutrition-grid">'+metric("◉","Протеини",p.protein)+metric("◔","Въглехидрати",p.carbs)+metric("◕","Мазнини",p.fat)+metric("◇","Фибри",p.fiber)+metric("◈","Захари",p.sugar)+metric("▤","Сол",p.salt)+metric("○","Наситени мазнини",p.saturated)+'</div></div>'+
-      '<div class="product-panel"><div class="product-panel-head"><h3>Какво да знаеш</h3><span>По данните на продукта</span></div>'+(pills||'<p class="product-empty">Няма автоматично откроени показатели. Това не означава, че продуктът е безрисков.</p>')+'</div>'+
-      '<div class="product-panel"><div class="product-panel-head"><h3>Състав и алергени</h3></div><p class="product-ingredient-copy">'+safe(p.ingredients||"В базата няма въведен състав за този продукт.")+'</p>'+
-      '<div class="product-ingredient-meta"><strong>Алергени:</strong> '+safe(p.allergens.length?p.allergens.join(", "):"Няма данни — провери етикета")+'</div>'+
-      '<div class="product-ingredient-meta"><strong>Добавки:</strong> '+safe(p.additives.length?p.additives.join(", "):"Няма посочени")+'</div></div>'+
+    const content=
+      '<div class="product-detail-top"><span class="product-section-kicker">ПРОДУКТОВ ПРОФИЛ ✦ NUTRIAI</span>'+
+      '<button id="productDetailClose" class="product-detail-close" type="button" aria-label="Затвори">×</button></div>'+
+      '<article class="product-detail-overview">'+
+        '<div class="product-detail-heading"><p>'+safe(p.brand||"Хранителен продукт")+'</p><h2>'+safe(p.name)+'</h2>'+
+        '<small>'+safe(p.quantity||"")+((p.quantity&&p.code)?" · ":"")+safe(p.code||"")+'</small></div>'+
+        '<div class="product-visual-summary">'+visual+renderMetricTiles(p,assessment)+'</div>'+
+        '<p class="product-metric-caption">Количество за '+safe(assessment.unit)+' • „—“ означава, че няма данни</p>'+
+      '</article>'+otherPhoto+
+      (personalRecord?'<div class="product-self-sourced">✦ Личен продукт — стойностите са въведени или потвърдени от етикета. Не са проверени от Open Food Facts.</div>':'')+
+      renderHealthPanel(p,assessment)+
+      renderSignals(assessment)+
+      renderAdditionalNutrition(p,assessment)+
+      '<section class="product-panel product-ingredients-panel">'+
+        '<div class="product-panel-head"><h3>Състав и алергени</h3></div>'+
+        '<p class="product-ingredient-copy">'+safe(p.ingredients||"В базата няма въведен състав. Провери опаковката.")+'</p>'+
+        '<div class="product-ingredient-meta"><strong>Алергени:</strong> '+safe(p.allergens?.length?p.allergens.join(", "):"Няма данни — провери етикета")+'</div>'+
+        '<div class="product-ingredient-meta"><strong>Добавки:</strong> '+safe(p.additives?.length?p.additives.join(", "):"Няма посочени")+'</div>'+
+      '</section>'+
       (personalRecord?'<button type="button" id="productEditSaved">✎ Редактирай моя продукт</button>':'')+
       '<button id="productAddToDiary" class="product-add-diary" type="button" '+(p.energy===null?"disabled":"")+'>＋ Добави 100 г към дневника</button>'+
-      '<p class="product-detail-footnote">Nutri-Score оценява хранителния състав. NOVA описва степента на преработка. Количествата, дневният прием и индивидуалните нужди също имат значение.</p>';
+      '<p class="product-detail-footnote">Nutri-Score: хранителен профил. NOVA: степен на преработка. Оценката е ориентир, а не оценка за безопасност или индивидуална пригодност.</p>';
+    el("productScanDetail").innerHTML=content;
     el("productScanDetail").classList.remove("hidden");
   }
-  async function getData(params) {
+    async function getData(params) {
     const barcode=String(params.barcode||"").replace(/\D/g,"");
     const query=String(params.query||"").trim();
     const args=barcode?{barcode}:{query};
