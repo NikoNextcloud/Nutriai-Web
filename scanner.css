@@ -580,3 +580,22 @@
 @media(prefers-reduced-motion:reduce){
   #view-products .product-health-progress>span {transition:none}
 }
+
+
+/* Product category must be explicit before label-only thresholds are applied. */
+#view-products .product-custom-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  font: inherit;
+  font-size: .82rem;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+}
+#view-products .product-custom-form select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
