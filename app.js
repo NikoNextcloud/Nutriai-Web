@@ -1418,6 +1418,10 @@ function bindEnhancedFeatures() {
   $("lookupBarcode")?.addEventListener("click", () => lookupBarcodeProduct($("barcodeValue").value.trim()));
   $("startBarcodeScanner")?.addEventListener("click", startLiveBarcodeScanner);
   $("closeBarcodeScanner")?.addEventListener("click", stopLiveBarcodeScanner);
+  $("barcodeModalLookup")?.addEventListener("click", lookupBarcodeFromModal);
+  $("barcodeModalValue")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); lookupBarcodeFromModal(); }
+  });
   $("clearManualFood")?.addEventListener("click", clearManualFoodData);
   $("barcodeImage")?.addEventListener("change", scanBarcodeImage);
   $("applyAnalysisCorrection")?.addEventListener("click", applyAnalysisCorrection);
@@ -1758,34 +1762,68 @@ function renderWeeklyStats() {
 
 async function lookupBarcodeProduct(code) {
   const status = $("barcodeStatus");
-  if (!code) {
-    status.textContent = "Въведи или снимай баркод.";
-    return;
+  const engine = window.NutriAIBarcodeEngine;
+  const normalized = engine?.normalize?.(code) || "";
+  if (!normalized) {
+    status.textContent = "Въведи валиден баркод EAN/UPC (8–14 цифри).";
+    return false;
   }
-  status.textContent = "Търся продукта...";
+  const aliases = engine?.variants?.(normalized) || [normalized];
+  status.textContent = "Проверявам продукта по баркод...";
+  $("barcodeValue").value = normalized;
+  if ($("productBarcodeInput")) $("productBarcodeInput").value = normalized;
+
   try {
-    const data = await fetchFoodDatabase({ barcode: code });
-    if (data.status === 0 || !data.product) throw new Error("Този баркод не е намерен в Open Food Facts. Опитай по име или провери цифрите.");
-    const product = data.product;
-    const nutrients = product.nutriments || {};
-    $("manualName").value = product.product_name_bg || product.product_name || product.generic_name || "Продукт";
+    let item = aliases.map(value => window.NutriAICustomProducts?.findBarcode?.(value)).find(Boolean);
+    let source = "personal";
+    if (!item) {
+      source = "catalog";
+      for (const value of aliases) {
+        const data = await fetchFoodDatabase({ barcode: value });
+        if (data.product && data.status !== 0) { item = data.product; break; }
+      }
+    }
+
+    if (!item) throw new Error("Баркодът е разчетен, но продуктът не е в Open Food Facts. Снимай етикета или го добави в твоята база.");
+
+    const personal = source === "personal";
+    const nutrients = item.nutriments || (personal ? {
+      "energy-kcal_100g": item.energy,
+      proteins_100g: item.protein, carbohydrates_100g: item.carbs,
+      fat_100g: item.fat, fiber_100g: item.fiber
+    } : {});
+    const fieldValue = (name, roundNumber = false) => {
+      const value = nutrients[name];
+      if (value === null || value === undefined || value === "") return "";
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric >= 0
+        ? (roundNumber ? Math.round(numeric) : numeric)
+        : "";
+    };
+    $("manualName").value = personal
+      ? item.name
+      : item.product_name_bg || item.product_name || item.generic_name || "Продукт";
     $("manualPer100").checked = true;
-    $("manualCalories").value = Math.round(Number(nutrients["energy-kcal_100g"]) || 0);
-    $("manualProtein").value = Number(nutrients.proteins_100g) || 0;
-    $("manualCarbs").value = Number(nutrients.carbohydrates_100g) || 0;
-    $("manualFat").value = Number(nutrients.fat_100g) || 0;
-    $("manualFiber").value = Number(nutrients.fiber_100g) || 0;
+    $("manualCalories").value = fieldValue("energy-kcal_100g", true);
+    $("manualProtein").value = fieldValue("proteins_100g");
+    $("manualCarbs").value = fieldValue("carbohydrates_100g");
+    $("manualFat").value = fieldValue("fat_100g");
+    $("manualFiber").value = fieldValue("fiber_100g");
     updateManualNutritionPreview();
-    status.textContent = "Данните за продукта са заредени. Провери етикета преди запис.";
+
+    status.textContent = personal
+      ? "Намерих продукта в личната ти база. Провери стойностите."
+      : "Намерих продукта. Провери хранителните стойности.";
     window.dispatchEvent(new CustomEvent("nutriai:barcode-product", {
-      detail: { barcode: code, product, capturedImage: window.nutriaiBarcodeFrame || "" }
+      detail: { barcode: normalized, product: item, capturedImage: window.nutriaiBarcodeFrame || "" }
     }));
-    window.nutriaiBarcodeFrame = "";
+    return true;
   } catch (error) {
-    status.textContent = error.message || "Не успях да заредя продукта.";
+    status.textContent = error.message || "Не успях да намеря продукта.";
     window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
-      detail: { barcode: code, message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
+      detail: { barcode: normalized, message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
     }));
+    return false;
   } finally {
     window.nutriaiBarcodeFrame = "";
   }
@@ -1913,55 +1951,70 @@ async function scanBarcodeImage(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   const status = $("barcodeStatus");
-  status.textContent = "Разчитам баркода...";
-  let rawValue = "";
-
+  const modalStatus = $("liveBarcodeStatus");
+  stopLiveBarcodeScanner();
+  status.textContent = "Разчитам баркода от снимката...";
+  let photo = "";
   try {
-    if ("BarcodeDetector" in window) {
+    if (!file.type.startsWith("image/")) throw new Error("Избери снимка на баркода.");
+    // Preserve the scanned label image for displaying next to the product.
+    try { photo = await fileToDataUrl(file); } catch { photo = ""; }
+    let code = await window.NutriAIBarcodeEngine?.scanFile(file, message => {
+      status.textContent = message;
+      if (modalStatus) modalStatus.textContent = message;
+    });
+
+    if (!code) {
+      status.textContent = "Опитвам допълнително разпознаване на линиите...";
+      code = await decodeBarcodeWithQuagga(file);
+    }
+
+    if (!code && photo && typeof callGroq === "function") {
       try {
-        const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
-        const bitmap = await createImageBitmap(file);
-        const codes = await detector.detect(bitmap);
-        bitmap.close();
-        rawValue = codes[0]?.rawValue || "";
-      } catch {
-        rawValue = "";
-      }
+        status.textContent = "AI проверява цифрите под баркода...";
+        const response = await callGroq([
+          { role: "system", content: "Прочети само ясно видими цифри от EAN/UPC баркод на снимката. Не отгатвай и не добавяй липсващи цифри. Върни JSON." },
+          { role: "user", content: [
+            { type: "text", text: 'Върни само JSON {"barcode":""} — ако цифрите не са изцяло четими, остави празен низ.' },
+            { type: "image_url", image_url: { url: photo } }
+          ] }
+        ], true);
+        const parsed = parseGroqJsonLoose(response);
+        const candidate = window.NutriAIBarcodeEngine?.normalize(parsed.barcode) || "";
+        if (candidate && isValidGtinChecksum(candidate)) code = candidate;
+      } catch { /* Image recognition remains optional if the AI quota is exhausted. */ }
     }
 
-    if (!rawValue) {
-      status.textContent = "Опитвам разширено разпознаване...";
-      try {
-        const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm");
-        const reader = new zxing.BrowserMultiFormatReader();
-        const imageUrl = URL.createObjectURL(file);
-        try {
-          const result = await reader.decodeFromImageUrl(imageUrl);
-          rawValue = result?.getText?.() || result?.text || "";
-        } finally {
-          URL.revokeObjectURL(imageUrl);
-          reader.reset?.();
-        }
-      } catch {
-        rawValue = "";
-      }
-    }
+    code = window.NutriAIBarcodeEngine?.normalize(code) || "";
+    if (!code) throw new Error("Не успях да разчета баркода. Снимай линиите и всички цифри отблизо или ги въведи ръчно.");
 
-    if (!rawValue) {
-      status.textContent = "Проверявам с EAN/UPC скенер...";
-      rawValue = await decodeBarcodeWithQuagga(file);
-    }
-
-    if (!rawValue) throw new Error("Баркодът не се вижда достатъчно ясно. Снимай само баркода отблизо, хоризонтално, на светло и без отблясък.");
-
-    $("barcodeValue").value = rawValue;
-    status.textContent = "Баркодът е разпознат: " + rawValue;
-    await lookupBarcodeProduct(rawValue);
+    $("barcodeValue").value = code;
+    if ($("barcodeModalValue")) $("barcodeModalValue").value = code;
+    if ($("productBarcodeInput")) $("productBarcodeInput").value = code;
+    window.nutriaiBarcodeFrame = photo;
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
+      detail: { barcode: code, capturedImage: photo }
+    }));
+    status.textContent = "Разчетен баркод: " + code + ". Търся продукта...";
+    await lookupBarcodeProduct(code);
   } catch (error) {
-    status.textContent = error.message || "Баркодът не беше разпознат. Въведи цифрите под него ръчно.";
+    status.textContent = error.message || "Баркодът не се разчита. Можеш да въведеш цифрите.";
+    window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
+      detail: { barcode: "", message: status.textContent, capturedImage: photo }
+    }));
   } finally {
     event.target.value = "";
   }
+}
+
+function isValidGtinChecksum(code) {
+  const digits = String(code || "");
+  if (![8,12,13,14].includes(digits.length) || !/^\d+$/.test(digits)) return false;
+  const chars = digits.split("").map(Number);
+  const check = chars.pop();
+  const sum = chars.reverse().reduce((total, digit, index) =>
+    total + digit * (index % 2 === 0 ? 3 : 1), 0);
+  return (10 - sum % 10) % 10 === check;
 }
 
 async function decodeBarcodeWithQuagga(file) {
@@ -2440,70 +2493,66 @@ async function startLiveBarcodeScanner() {
   const modal = $("barcodeScannerModal");
   const video = $("barcodeVideo");
   const status = $("liveBarcodeStatus");
+  if (!modal || !video || !status) return;
+
   modal.classList.remove("hidden");
-  status.textContent = "Разреши достъп до камерата и насочи баркода в рамката.";
+  status.textContent = "Проверявам камерата...";
   window.nutriBarcodeDetected = false;
 
   try {
-    const zxing = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.0/+esm");
-    const reader = new zxing.BrowserMultiFormatReader();
-    const controls = await reader.decodeFromConstraints({
-      audio: false,
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+    const engine = window.NutriAIBarcodeEngine;
+    if (!engine) throw new Error("Скенерът не е зареден. Обнови страницата и опитай отново.");
+
+    await engine.start({
+      video,
+      onStatus(message) { status.textContent = message; },
+      onError(error) {
+        status.textContent = error?.name === "NotAllowedError"
+          ? "Камерата е забранена. Разреши я от настройките на браузъра или използвай снимка."
+          : error?.name === "NotFoundError"
+            ? "Не е намерена камера. Използвай снимка на баркода или въведи цифрите."
+            : error?.message || "Камерата не се стартира. Използвай снимка или въведи EAN.";
+      },
+      async onDetected(rawValue, capturedImage) {
+        if (window.nutriBarcodeDetected) return;
+        window.nutriBarcodeDetected = true;
+        status.textContent = "Баркодът е разпознат: " + rawValue;
+        $("barcodeValue").value = rawValue;
+        if ($("barcodeModalValue")) $("barcodeModalValue").value = rawValue;
+        if ($("productBarcodeInput")) $("productBarcodeInput").value = rawValue;
+        window.nutriaiBarcodeFrame = capturedImage || "";
+        window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
+          detail: { barcode: rawValue, capturedImage: capturedImage || "" }
+        }));
+        stopLiveBarcodeScanner();
+        await lookupBarcodeProduct(rawValue);
       }
-    }, video, async (result) => {
-      if (!result || window.nutriBarcodeDetected) return;
-      window.nutriBarcodeDetected = true;
-      const rawValue = result.getText?.() || result.text || "";
-      if (!rawValue) {
-        window.nutriBarcodeDetected = false;
-        return;
-      }
-      status.textContent = "Баркодът е разпознат: " + rawValue;
-      $("barcodeValue").value = rawValue;
-      window.nutriaiBarcodeFrame = captureBarcodeFrame(video);
-      window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
-        detail: { barcode: rawValue, capturedImage: window.nutriaiBarcodeFrame }
-      }));
-      stopLiveBarcodeScanner();
-      $("barcodeStatus").textContent = "Зареждам продукта...";
-      await lookupBarcodeProduct(rawValue);
     });
-    window.nutriBarcodeControls = controls;
   } catch (error) {
-    stopBarcodeMediaTracks();
-    status.textContent = error?.name === "NotAllowedError"
-      ? "Камерата не е разрешена. Разреши достъпа от настройките на браузъра."
-      : "Камерата не можа да се стартира. Опитай от защитената Vercel страница.";
+    status.textContent = error?.message || "Неуспешно сканиране. Опитай снимка или ръчен EAN.";
   }
 }
 
-
-function captureBarcodeFrame(video) {
-  if (!video || !video.videoWidth || !video.videoHeight) return "";
-  try {
-    const limit = 720;
-    const scale = Math.min(1, limit / Math.max(video.videoWidth, video.videoHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.72);
-  } catch {
-    return "";
+async function lookupBarcodeFromModal() {
+  const status = $("liveBarcodeStatus");
+  const engine = window.NutriAIBarcodeEngine;
+  const code = engine?.normalize($("barcodeModalValue")?.value);
+  if (!code) {
+    if (status) status.textContent = "Въведи 8–14 цифри от баркода, отпечатани под линиите.";
+    return false;
   }
+  stopLiveBarcodeScanner();
+  $("barcodeValue").value = code;
+  if ($("productBarcodeInput")) $("productBarcodeInput").value = code;
+  window.nutriaiBarcodeFrame = "";
+  window.dispatchEvent(new CustomEvent("nutriai:barcode-found", {
+    detail: { barcode: code, capturedImage: "" }
+  }));
+  return lookupBarcodeProduct(code);
 }
 
 function stopLiveBarcodeScanner() {
-  try {
-    window.nutriBarcodeControls?.stop();
-  } catch {
-    // Camera tracks are stopped below as a fallback.
-  }
-  window.nutriBarcodeControls = null;
+  window.NutriAIBarcodeEngine?.stop?.();
   window.nutriBarcodeDetected = false;
   stopBarcodeMediaTracks();
   $("barcodeScannerModal")?.classList.add("hidden");
@@ -2512,10 +2561,9 @@ function stopLiveBarcodeScanner() {
 function stopBarcodeMediaTracks() {
   const video = $("barcodeVideo");
   const stream = video?.srcObject;
-  if (stream?.getTracks) stream.getTracks().forEach((track) => track.stop());
+  if (stream?.getTracks) stream.getTracks().forEach(track => track.stop());
   if (video) video.srcObject = null;
 }
-
 
 function favoriteNameKey(name) {
   return String(name || "").trim().toLocaleLowerCase("bg-BG").replace(/\s+/g, " ");
