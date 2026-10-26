@@ -371,3 +371,231 @@
 @media (prefers-reduced-motion: reduce) {
   .barcode-guide span {animation: none !important;}
 }
+
+
+/* NutriAI 3.1 — product insights: photographed product + six nutrient icons + a
+   transparent nutrition profile indicator. Inspired by friendly mobile labels. */
+#view-products .product-scan-detail {scroll-margin-top: 18px}
+#view-products .product-detail-top {margin: 18px 2px 11px}
+#view-products .product-detail-overview {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: 0 14px 32px rgba(25,56,43,.06);
+  padding: 17px 13px 12px;
+  overflow: hidden;
+}
+#view-products .product-detail-heading {text-align:center;padding:1px 3px 14px}
+#view-products .product-detail-heading p {
+  margin:0 0 5px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.035em;
+}
+#view-products .product-detail-heading h2 {
+  font-size:clamp(1.12rem,4.8vw,1.48rem);
+  margin:0 0 6px;
+  line-height:1.18;
+  letter-spacing:-.045em;
+  color:var(--text);
+  overflow-wrap:anywhere;
+}
+#view-products .product-detail-heading small {font-size:.65rem;color:var(--muted);letter-spacing:.02em}
+#view-products .product-visual-summary {
+  display:grid;
+  grid-template-columns:minmax(84px,112px) minmax(0,1fr);
+  gap:10px;
+  align-items:stretch;
+  width:100%;
+}
+#view-products .product-quick-photo {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  justify-content:center;
+  background:linear-gradient(160deg,#fbfbf9,#f0f4ed);
+  border:1px solid #edf1e7;
+  border-radius:18px;
+  padding:7px;
+  gap:7px;
+}
+#view-products .product-quick-photo .product-identity-image {
+  display:block;
+  width:100%;
+  min-width:0;
+  height:clamp(90px,24vw,138px);
+  object-fit:contain;
+  flex-shrink:0;
+  border-radius:11px;
+  background:transparent;
+}
+#view-products .product-quick-photo small {
+  font-size:.54rem;
+  text-align:center;
+  color:#637c6f;
+  line-height:1.3;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+#view-products .product-quick-metrics {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  min-width:0;
+}
+#view-products .product-quick-tile {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-width:0;
+  min-height:80px;
+  padding:8px 3px 7px;
+  text-align:center;
+  border-radius:15px;
+  color:#2d4036;
+  border:1px solid rgba(71,95,78,.06);
+  position:relative;
+  overflow:hidden;
+}
+#view-products .product-quick-emoji {font-size:1.25rem;line-height:1.1;filter:drop-shadow(0 3px 2px rgba(18,33,17,.07))}
+#view-products .product-quick-number {display:flex;align-items:baseline;justify-content:center;gap:2px;white-space:nowrap;min-height:1.2rem}
+#view-products .product-quick-number strong {font-weight:850;font-size:clamp(.78rem,2.8vw,1.05rem);line-height:1.15;letter-spacing:-.04em}
+#view-products .product-quick-number small {font-size:.52rem;font-weight:600;opacity:.7}
+#view-products .product-metric-empty {font-size:1rem;opacity:.5;font-weight:800;line-height:1}
+#view-products .product-quick-label {font-size:clamp(.49rem,1.95vw,.63rem);font-weight:750;line-height:1.2;letter-spacing:-.025em;max-width:100%;overflow-wrap:anywhere}
+#view-products .product-quick-energy {background:#fff3d4}
+#view-products .product-quick-protein {background:#fce8e4}
+#view-products .product-quick-carbs {background:#fff5dc}
+#view-products .product-quick-fat {background:#e5f2d6}
+#view-products .product-quick-sugar {background:#ffe8ee}
+#view-products .product-quick-fiber {background:#e3f1e8}
+#view-products .product-metric-caption {text-align:center;font-size:.65rem;color:var(--muted);margin:11px 0 0;line-height:1.4}
+#view-products .product-health-result {
+  --health-color:#85928b;
+  --health-light:#f1f4f1;
+  background:var(--card);
+  margin-top:14px;
+  padding:19px 16px 14px;
+  border:1px solid var(--line);
+  border-radius:25px;
+  box-shadow:0 12px 28px rgba(20,43,29,.045);
+}
+#view-products .health-excellent {--health-color:#168756;--health-light:#e5f3e9}
+#view-products .health-balanced {--health-color:#6f9a2f;--health-light:#eff5df}
+#view-products .health-caution {--health-color:#d48a2d;--health-light:#fff2de}
+#view-products .health-limit {--health-color:#d2554c;--health-light:#fae9e8}
+#view-products .health-unknown {--health-color:#83958c;--health-light:#eff3ef}
+#view-products .product-health-heading {display:flex;justify-content:space-between;align-items:center;gap:9px}
+#view-products .product-health-heading span {font-size:.7rem;letter-spacing:.07em;font-weight:850;color:var(--text)}
+#view-products .product-health-heading small {font-size:.63rem;color:var(--muted);text-align:right}
+#view-products .product-health-body {display:grid;grid-template-columns:102px minmax(0,1fr);align-items:center;gap:14px;margin-top:18px}
+#view-products .product-health-ring {
+  width:102px;height:102px;
+  border-radius:50%;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--health-color) var(--health-percent),var(--health-light) 0);
+  box-shadow:0 6px 20px color-mix(in srgb, var(--health-color) 12%, transparent);
+  position:relative;
+}
+#view-products .product-health-ring-core {
+  width:79px;height:79px;border-radius:50%;
+  background:var(--card);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--health-color);
+}
+#view-products .product-health-ring-core strong {font-size:1.74rem;line-height:1;letter-spacing:-.075em;font-weight:850}
+#view-products .product-health-ring-core small {font-size:.65rem;font-weight:800;margin-top:5px}
+#view-products .product-health-message {min-width:0}
+#view-products .product-health-message h3 {font-size:1.07rem;line-height:1.19;letter-spacing:-.035em;margin:0 0 6px;color:var(--text)}
+#view-products .product-health-message p {font-size:.72rem;line-height:1.5;color:var(--muted);margin:0 0 10px}
+#view-products .product-health-message>small {font-size:.63rem;font-weight:700;color:var(--health-color);display:block;margin-top:7px;line-height:1.4}
+#view-products .product-health-progress {height:5px;border-radius:100px;background:var(--health-light);overflow:hidden;width:100%}
+#view-products .product-health-progress>span {height:100%;display:block;background:var(--health-color);border-radius:100px;transition:width .35s ease}
+#view-products .product-health-flags {display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 12px}
+#view-products .product-health-flag {display:inline-flex;align-items:center;min-height:27px;padding:5px 10px;border-radius:9px;background:var(--card-2);color:var(--text);font-size:.66rem;font-weight:800;border:1px solid var(--line)}
+#view-products .product-health-nutri {color:var(--health-color);border-color:color-mix(in srgb,var(--health-color) 25%,var(--line));background:var(--health-light)}
+#view-products .product-health-method {border-top:1px solid var(--line);padding-top:4px}
+#view-products .product-health-method summary {font-size:.75rem;font-weight:750;color:var(--text);padding:10px 1px;cursor:pointer;line-height:1.5}
+#view-products .product-health-method summary:focus-visible {outline:2px solid var(--health-color);outline-offset:2px;border-radius:4px}
+#view-products .product-health-method p {font-size:.71rem;line-height:1.65;color:var(--muted);margin:0 0 10px}
+#view-products .product-health-safety-note {font-size:.66rem;color:var(--muted);line-height:1.55;margin:7px 0 0}
+#view-products .product-insights-panel {display:grid;gap:9px}
+#view-products .product-insights-panel .product-panel-head {margin:0 0 4px}
+#view-products .product-insight {
+  display:grid;
+  grid-template-columns:39px minmax(0,1fr) 9px;
+  align-items:center;
+  gap:11px;
+  border-radius:14px;
+  padding:10px 11px;
+  border:1px solid transparent;
+}
+#view-products .product-insight-warn {background:#fff1ee;border-color:#f7dcd6;color:#6f352d}
+#view-products .product-insight-good {background:#ecf8ec;border-color:#d5ead5;color:#1e603a}
+#view-products .product-insight-neutral {background:#f1f4f3;border-color:#e3e9e6;color:#536b5c}
+#view-products .product-insight-icon {display:grid;place-items:center;background:rgba(255,255,255,.72);width:37px;height:37px;border-radius:11px;font-size:1.23rem}
+#view-products .product-insight-copy {min-width:0;display:grid;gap:5px}
+#view-products .product-insight-copy strong {font-size:.8rem;line-height:1.4;overflow-wrap:anywhere}
+#view-products .product-insight-copy small {font-size:.7rem;line-height:1.45;opacity:.87;overflow-wrap:anywhere}
+#view-products .product-insight-dot {width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.65}
+#view-products .product-insights-empty {background:var(--card-2);color:var(--muted);border-radius:13px;padding:13px;font-size:.75rem;line-height:1.5}
+#view-products .product-more-values {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#view-products .product-more-values>div {background:var(--card-2);padding:13px 10px;border-radius:12px;display:grid;gap:7px;min-width:0}
+#view-products .product-more-values span {font-size:.69rem;color:var(--muted)}
+#view-products .product-more-values strong {font-size:.89rem;color:var(--text);overflow-wrap:anywhere}
+#view-products .product-label-note {font-size:.66rem;line-height:1.5;color:var(--muted);margin:12px 0 0}
+#view-products .product-ingredients-panel {margin-top:14px}
+[data-theme="dark"] #view-products .product-quick-photo {background:#26362d;border-color:#3b5343}
+[data-theme="dark"] #view-products .product-quick-photo small {color:#b6cdbf}
+[data-theme="dark"] #view-products .product-quick-energy {background:#4c4230;color:#ffedbe}
+[data-theme="dark"] #view-products .product-quick-protein {background:#513b3a;color:#ffe0da}
+[data-theme="dark"] #view-products .product-quick-carbs {background:#4c4530;color:#fff0bd}
+[data-theme="dark"] #view-products .product-quick-fat {background:#334d39;color:#e0f7cf}
+[data-theme="dark"] #view-products .product-quick-sugar {background:#51353e;color:#ffe0e9}
+[data-theme="dark"] #view-products .product-quick-fiber {background:#314b40;color:#dbf5e5}
+[data-theme="dark"] #view-products .product-health-light {color:var(--text)}
+[data-theme="dark"] #view-products .product-health-nutri {background:#1c332a}
+[data-theme="dark"] #view-products .product-insight-warn {background:#48312c;border-color:#694039;color:#ffded7}
+[data-theme="dark"] #view-products .product-insight-good {background:#233d2b;border-color:#365b41;color:#c8efcf}
+[data-theme="dark"] #view-products .product-insight-neutral {background:#2b3831;border-color:#43564a;color:#d0ded4}
+[data-theme="dark"] #view-products .product-insight-icon {background:rgba(255,255,255,.08)}
+@media(max-width:365px) {
+  #view-products .product-detail-overview {padding:14px 9px 11px}
+  #view-products .product-visual-summary {grid-template-columns:minmax(73px,89px) minmax(0,1fr);gap:7px}
+  #view-products .product-quick-metrics {gap:5px}
+  #view-products .product-quick-tile {min-height:76px;border-radius:12px;padding:5px 2px}
+  #view-products .product-quick-emoji {font-size:1.07rem}
+  #view-products .product-quick-label {font-size:.5rem}
+  #view-products .product-quick-number strong {font-size:.77rem}
+  #view-products .product-health-body {grid-template-columns:88px minmax(0,1fr);gap:12px}
+  #view-products .product-health-ring {width:88px;height:88px}
+  #view-products .product-health-ring-core {width:67px;height:67px}
+  #view-products .product-health-ring-core strong {font-size:1.52rem}
+  #view-products .product-health-message h3 {font-size:.94rem}
+}
+@media(prefers-reduced-motion:reduce){
+  #view-products .product-health-progress>span {transition:none}
+}
+
+
+/* Product category must be explicit before label-only thresholds are applied. */
+#view-products .product-custom-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  font: inherit;
+  font-size: .82rem;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+}
+#view-products .product-custom-form select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}

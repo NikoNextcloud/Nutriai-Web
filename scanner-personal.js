@@ -29,6 +29,7 @@
     saturated:nullable(p?.saturated,100),salt:nullable(p?.salt,100),
     score:null,nova:null,image:"",imageData:safePhoto(p?.imageData)?p.imageData:"",
     allergens:[],additives:[],quantity:"",source:"personal",
+    isDrink:p?.isDrink===true?true:p?.isDrink===false?false:null,
     updatedAt:String(p?.updatedAt||new Date().toISOString())
   });
   function nullable(v,max) {
@@ -110,6 +111,8 @@
     const values={...known,
       code:code||known?.code||"",name:known?.name||query||"",
       ingredients:known?.ingredients||""};
+    const typeField=form.elements.namedItem("productType");
+    if(typeField)typeField.value=known?.isDrink===true?"drink":known?.isDrink===false?"food":"unknown";
     for(const name of ["name","brand","code","ingredients",...numericFields]){
       const input=form.elements.namedItem(name);
       if(!input)continue;
@@ -154,6 +157,7 @@
     const record=clean({
       id:existing?.id||crypto.randomUUID(),name,code,
       brand:data.get("brand"),ingredients:data.get("ingredients"),
+      isDrink:data.get("productType")==="drink"?true:data.get("productType")==="food"?false:null,
       imageData:existing?.imageData||"",
       ...Object.fromEntries(numericFields.map(name=>[name,data.get(name)]))
     });
