@@ -349,7 +349,10 @@
       const own=personal()?.findBarcode(code);
       if(own) {show(own);status("Продуктът е намерен в твоята база.","success");return;}
       personal()?.showNoMatch({code,photo:capturePhoto,error:e.detail?.message||""});
-      status("Не е намерен запис за този EAN. Добави данни от етикета или AI снимка.","error");
+      status(code
+        ? "Баркодът е разчетен, но продуктът липсва в каталога. Добави го от етикета."
+        : "Баркодът не се разчита от тази снимка. Опитай отблизо или въведи цифрите под линиите.",
+        "error");
     });
     el("productScanDetail").addEventListener("error",event=>{
       const image=event.target;
