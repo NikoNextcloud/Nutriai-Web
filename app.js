@@ -2018,12 +2018,21 @@ function isValidGtinChecksum(code) {
 }
 
 async function decodeBarcodeWithQuagga(file) {
+  const timed = (work, ms) => {
+    let timer;
+    return Promise.race([
+      work,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Barcode decoding timeout")), ms);
+      })
+    ]).finally(() => clearTimeout(timer));
+  };
   try {
-    const module = await import("https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/+esm");
+    const module = await timed(import("https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/+esm"), 6500);
     const Quagga = module.default || module;
     const imageUrl = URL.createObjectURL(file);
     try {
-      return await new Promise((resolve) => {
+      return await timed(new Promise(resolve => {
         Quagga.decodeSingle({
           src: imageUrl,
           numOfWorkers: 0,
@@ -2031,8 +2040,8 @@ async function decodeBarcodeWithQuagga(file) {
           locator: { patchSize: "medium", halfSample: true },
           inputStream: { size: 1280 },
           decoder: { readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader", "code_128_reader"] }
-        }, (result) => resolve(result?.codeResult?.code || ""));
-      });
+        }, result => resolve(result?.codeResult?.code || ""));
+      }), 6500);
     } finally {
       URL.revokeObjectURL(imageUrl);
     }
