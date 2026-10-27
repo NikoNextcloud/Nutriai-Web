@@ -4,15 +4,42 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f3f7f5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="NutriAI">
   <title>NutriAI</title>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="scanner.css?v=20261026b">
+  <link rel="stylesheet" href="pwa.css">
+  <script src="pwa.js" defer></script>
 </head>
 <body>
+  <aside class="pwa-toolbar" aria-label="Приложение и връзка">
+    <span id="pwaConnection" role="status" hidden></span>
+    <button id="pwaInstall" type="button">Инсталирай NutriAI</button>
+  </aside>
+  <div id="pwaOfflineReady" class="pwa-notice" role="status" hidden>Готово за работа без интернет: дневник, вода и лични продукти.</div>
+  <div id="pwaUpdate" class="pwa-notice" role="status" hidden>
+    <span>Има нова версия. Завърши текущото въвеждане преди обновяване.</span>
+    <button id="pwaApplyUpdate" type="button">Обнови</button>
+  </div>
+  <dialog id="pwaInstallHelp" class="pwa-dialog" aria-labelledby="pwaHelpTitle">
+    <form method="dialog"><button class="pwa-dialog-close" aria-label="Затвори">✕</button></form>
+    <img src="icons/icon-192.png" width="64" height="64" alt="">
+    <h2 id="pwaHelpTitle">NutriAI на твоя телефон</h2>
+    <p id="pwaInstallSteps"></p>
+    <p>Преди инсталиране: <strong>История → Експорт</strong>. Ако в приложението данните липсват, първо създай начален профил, след това избери <strong>История → Импорт</strong> и своя архив. Данните остават на устройството и не се синхронизират автоматично.</p>
+    <p>Дневникът и личните продукти работят без интернет след първото пълно зареждане. AI и външната продуктова база изискват връзка.</p>
+    <button id="pwaNativeInstall" type="button" hidden>Инсталирай</button>
+    <p id="pwaInstallStatus" role="status"></p>
+  </dialog>
   <section class="onboarding-screen" id="onboardingScreen">
     <div class="onboarding-card">
       <div class="onboarding-hero">

@@ -1,5 +1,5 @@
 /* NutriAI barcode engine — camera-first, with native and ZXing decoder fallback.
-   The camera stream is opened synchronously from the user's click, before loading any CDN. */
+   The camera stream is opened from the user's click before loading the local decoder. */
 (() => {
   "use strict";
 
@@ -7,11 +7,7 @@
   let active = null;
   let libraryPromise = null;
   const formats = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"];
-  const sources = [
-    "https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/+esm",
-    "https://esm.sh/@zxing/browser@0.2.1",
-    "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm"
-  ];
+  const libraryURL = new URL("vendor/zxing-0.2.1.js", document.currentScript?.src || document.baseURI).href;
 
   function normalize(value) {
     const digits = String(value ?? "").replace(/\D/g, "");
@@ -43,18 +39,17 @@
   async function loadLibrary() {
     if (!libraryPromise) {
       libraryPromise = (async () => {
-        let previous;
-        for (const url of sources) {
-          try {
-            const module = await Promise.race([
-              import(url),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout loading ZXing")), 6500))
-            ]);
-            if (typeof module.BrowserMultiFormatReader === "function") return module;
-            previous = new Error("Неподдържан модул за сканиране.");
-          } catch (error) { previous = error; }
-        }
-        throw previous || new Error("Библиотеката за разпознаване не се зареди.");
+        if (window.NutriAIZXing?.BrowserMultiFormatReader) return window.NutriAIZXing;
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          const timer = setTimeout(() => { script.remove(); reject(new Error("Timeout loading ZXing")); }, 10000);
+          script.src = libraryURL;
+          script.onload = () => { clearTimeout(timer); resolve(); };
+          script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error("Библиотеката за разпознаване не се зареди.")); };
+          document.head.append(script);
+        });
+        if (typeof window.NutriAIZXing?.BrowserMultiFormatReader !== "function") throw new Error("Неподдържан модул за сканиране.");
+        return window.NutriAIZXing;
       })().catch(error => {
         libraryPromise = null; // A later scan can retry after network recovery.
         throw error;

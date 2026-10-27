@@ -28,6 +28,12 @@ const DB_NAME = "nutriai-storage";
 const DB_VERSION = 1;
 const DB_STORE = "keyval";
 let dbPromise = null;
+const pendingPersistentSaves = new Set();
+window.NutriAIStorage = Object.freeze({
+  async flush() {
+    while (pendingPersistentSaves.size) await Promise.all([...pendingPersistentSaves]);
+  }
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
   await hydratePersistentState();
@@ -77,6 +83,8 @@ function load(key, fallback) {
 function save(key, value) {
   saveLocal(key, value);
   const persistentSave = savePersistent(key, value);
+  pendingPersistentSaves.add(persistentSave);
+  persistentSave.then(() => pendingPersistentSaves.delete(persistentSave), () => pendingPersistentSaves.delete(persistentSave));
   persistentSave.catch((error) => console.warn("IndexedDB save failed", error));
   return persistentSave;
 }
@@ -85,15 +93,8 @@ function saveLocal(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    if (key === "nutriai.meals") {
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        // Ignore localStorage cleanup failures; IndexedDB remains the primary store.
-      }
-    } else {
-      console.warn("localStorage save failed", error);
-    }
+    // Keep the previous fallback copy on quota errors; IndexedDB stores the new value.
+    console.warn("localStorage save failed", error);
   }
 }
 
@@ -169,9 +170,11 @@ async function idbGet(key) {
 async function savePersistent(key, value) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
-    const request = db.transaction(DB_STORE, "readwrite").objectStore(DB_STORE).put(value, key);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    const transaction = db.transaction(DB_STORE, "readwrite");
+    transaction.objectStore(DB_STORE).put(value, key);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error || new Error("Записът е прекъснат."));
   });
 }
 
@@ -1022,6 +1025,7 @@ function foodItemHtml(food) {
 }
 
 async function callGroq(messages, jsonMode = false) {
+  if (navigator.onLine === false) throw new Error("AI изисква интернет. Данните ти са запазени; свържи се и опитай отново.");
   const body = {
     model: "gemini-2.5-flash",
     messages,
@@ -1043,6 +1047,7 @@ async function callGroq(messages, jsonMode = false) {
 
   const response = await fetch(endpoint, {
     method: "POST",
+    cache: "no-store",
     headers,
     body: JSON.stringify(body)
   });
@@ -2043,9 +2048,10 @@ function applyAnalysisCorrection() {
   $("analysisStatus").textContent = "Корекцията е приложена. Можеш да добавиш храната.";
 }
 
-function exportNutriData() {
+async function exportNutriData() {
+  await window.NutriAICustomProducts?.ready?.();
   const payload = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     profile: state.profile,
     meals: state.meals,
@@ -2053,7 +2059,14 @@ function exportNutriData() {
     favorites: state.favorites,
     customProducts: window.NutriAICustomProducts?.all() || [],
     reminders: state.reminders,
-    water: state.water
+    water: state.water,
+    messages: state.messages,
+    aiPlan: state.aiPlan,
+    aiPlanVariant: state.aiPlanVariant,
+    fridgeItems: state.fridgeItems,
+    fridgeRecipe: state.fridgeRecipe,
+    recentProducts: load("nutriai.productScanRecent.v1", []),
+    theme: document.documentElement.dataset.theme
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const link = document.createElement("a");
@@ -2076,6 +2089,16 @@ async function importNutriData(event) {
     state.favorites = Array.isArray(data.favorites) ? data.favorites : state.favorites;
     state.reminders = data.reminders || state.reminders;
     state.water = data.water || state.water;
+    if (Array.isArray(data.messages)) state.messages = data.messages;
+    if (Object.hasOwn(data, "aiPlan")) state.aiPlan = data.aiPlan;
+    if (Number.isInteger(data.aiPlanVariant)) state.aiPlanVariant = data.aiPlanVariant;
+    if (Array.isArray(data.fridgeItems)) state.fridgeItems = data.fridgeItems;
+    if (Object.hasOwn(data, "fridgeRecipe")) state.fridgeRecipe = data.fridgeRecipe;
+    if (["light", "dark"].includes(data.theme)) localStorage.setItem("nutriai.theme", data.theme);
+    if (Array.isArray(data.recentProducts)) {
+      localStorage.setItem("nutriai.productScanRecent.v1", JSON.stringify(data.recentProducts.slice(0, 12)));
+      window.dispatchEvent(new CustomEvent("nutriai:recent-products-reloaded", { detail: { products: data.recentProducts.slice(0, 12) } }));
+    }
     await Promise.all([
       save("nutriai.profile", state.profile),
       save("nutriai.meals", state.meals),
@@ -2083,12 +2106,20 @@ async function importNutriData(event) {
       save("nutriai.favorites", state.favorites),
       save("nutriai.reminders", state.reminders),
       save("nutriai.water", state.water),
+      save("nutriai.messages", state.messages),
+      save("nutriai.aiPlan", state.aiPlan),
+      save("nutriai.aiPlanVariant", state.aiPlanVariant),
+      save("nutriai.fridgeItems", state.fridgeItems),
+      save("nutriai.fridgeRecipe", state.fridgeRecipe),
       ...(Array.isArray(data.customProducts) ? [save("nutriai.customProducts.v1", data.customProducts)] : [])
     ]);
     if (Array.isArray(data.customProducts)) {
       window.dispatchEvent(new CustomEvent("nutriai:personal-catalog-reloaded", { detail: { products: data.customProducts } }));
     }
     hydrateReminderForm();
+    hydrateProfileForm();
+    updateAppVisibility();
+    restoreTheme();
     renderFavorites();
     renderAll();
     $("archiveStatus").textContent = "Архивът е възстановен успешно.";
@@ -2519,6 +2550,12 @@ function stopLiveBarcodeScanner() {
   stopBarcodeMediaTracks();
   $("barcodeScannerModal")?.classList.add("hidden");
 }
+
+// Mobile OSes may suspend a standalone window while retaining its media stream.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") stopLiveBarcodeScanner();
+});
+window.addEventListener("pagehide", stopLiveBarcodeScanner);
 
 function stopBarcodeMediaTracks() {
   const video = $("barcodeVideo");

@@ -432,5 +432,11 @@
     };
     for(const id of ["productScanDetail","productScanMatches","productScanRecent"])el(id).addEventListener("error",imageError,true);
     renderRecent();
+    window.addEventListener("nutriai:recent-products-reloaded", event => {
+      const products = event.detail?.products;
+      if (!Array.isArray(products)) return;
+      recent.splice(0, recent.length, ...products.slice(0, 12));
+      renderRecent();
+    });
   });
 })();

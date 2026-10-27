@@ -1,10 +1,19 @@
 {
   "name": "NutriAI",
   "short_name": "NutriAI",
-  "start_url": ".",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "lang": "bg",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#111827",
+  "background_color": "#f3f7f5",
+  "theme_color": "#f3f7f5",
+  "prefer_related_applications": false,
+  "categories": ["health", "food", "lifestyle"],
   "description": "AI приложение за анализ на храна, калории и хранителен план.",
-  "icons": []
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

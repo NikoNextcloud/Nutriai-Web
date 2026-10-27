@@ -1,0 +1,15 @@
+.pwa-toolbar, .pwa-notice { max-width: 520px; margin: 10px auto; padding: 10px 16px; font: 600 .8rem/1.5 system-ui, sans-serif; }
+.pwa-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; padding-top: max(10px, env(safe-area-inset-top)); }
+.pwa-toolbar:has(> [hidden]:first-child):has(> [hidden]:last-child) { display: none; }
+.pwa-toolbar button, .pwa-notice button, .pwa-dialog > button { color: #fff; background: #087849; border: 0; border-radius: 12px; padding: 11px 16px; font: inherit; cursor: pointer; min-height: 44px; }
+#pwaConnection { flex: 1; color: var(--text, #17392a); }
+.pwa-notice { border: 1px solid var(--line, #c8ddd1); border-radius: 14px; background: var(--card, #fff); color: var(--text, #17392a); }
+.pwa-notice button { margin-top: 8px; }
+.pwa-dialog { width: min(440px, calc(100% - 32px)); box-sizing: border-box; max-height: calc(100dvh - 48px); padding: 26px; border: 1px solid var(--line, #c8ddd1); border-radius: 24px; color: var(--text, #17392a); background: var(--card, #fff); font: 500 .9rem/1.65 system-ui, sans-serif; }
+.pwa-dialog::backdrop { background: #06271999; }
+.pwa-dialog img { border-radius: 16px; }
+.pwa-dialog h2 { margin-top: 14px; }
+.pwa-dialog-close { float: right; border: 0; background: transparent; color: inherit; cursor: pointer; min-width: 44px; min-height: 44px; }
+.pwa-toolbar [hidden], .pwa-notice[hidden], .pwa-dialog [hidden] { display: none !important; }
+.pwa-dialog button:focus-visible, .pwa-toolbar button:focus-visible, .pwa-notice button:focus-visible { outline: 3px solid #e89d24; outline-offset: 3px; }
+@media (display-mode: standalone) { body { min-height: 100dvh; } }

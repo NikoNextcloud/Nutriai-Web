@@ -202,6 +202,7 @@
     renderMatches(visibleQuery);
   }
   window.NutriAICustomProducts={
+    ready: () => ready,
     findBarcode,findQuery,all,hydrate,openEditor,showNoMatch,clearNoMatch,renderMatches,
     setRecordsFromImport
   };
