@@ -63,15 +63,20 @@ export default async function handler(request, response) {
           error: "Външната хранителна база ограничава достъпа. Опитайте отново по-късно."
         });
       }
+      const type = upstream.headers.get("content-type") || "";
+      const data = type.includes("json") ? await upstream.json().catch(() => null) : null;
+      if (barcode && upstream.status === 404 && data?.status === 0) {
+        response.setHeader("Cache-Control", "public, s-maxage=300");
+        return response.status(200).json({ status: 0, product: null });
+      }
       if (!upstream.ok) {
         // Temporary upstream errors may be resolved via the alternative regional host.
         continue;
       }
 
-      const type = upstream.headers.get("content-type") || "";
-      if (!type.includes("json")) continue;
-      const data = await upstream.json();
-      if (!data || typeof data !== "object") continue;
+      if (!data || typeof data !== "object" || Array.isArray(data)) continue;
+      if (barcode ? data.status !== 0 && (!data.product || typeof data.product !== "object" || Array.isArray(data.product))
+        : !Array.isArray(data.products)) continue;
 
       response.setHeader("Cache-Control", barcode
         ? "public, s-maxage=1800, stale-while-revalidate=3600"
@@ -83,9 +88,6 @@ export default async function handler(request, response) {
     }
   }
 
-  if (lastStatus === 404 && barcode) {
-    return response.status(404).json({ error: "Баркодът не е намерен в хранителната база." });
-  }
   if (sawTimeout) {
     return response.status(504).json({ error: "Връзката с хранителната база е твърде бавна. Опитайте отново." });
   }

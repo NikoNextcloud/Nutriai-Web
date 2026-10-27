@@ -6,12 +6,11 @@
   const validOwnPhoto = data => typeof data === "string" && data.length < 220000 && /^data:image\/jpeg;base64,[a-zA-Z0-9+/=]+$/.test(data);
   const storeKey = "nutriai.productScanRecent.v1";
   const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const num = value => value === undefined || value === null || value === "" ? null : Number.isFinite(Number(value)) ? Number(value) : null;
+  const num = value => value === undefined || value === null || typeof value === "boolean" || String(value).trim() === "" ? null : Number.isFinite(Number(value)) && Number(value)>=0 ? Number(value) : null;
   const numberLabel = (n, unit="г") => n === null ? "Няма данни" : (Math.round(n*10)/10).toLocaleString("bg-BG") + " " + unit;
-  const recent = (() => { try { const items=JSON.parse(localStorage.getItem(storeKey)||"[]"); return Array.isArray(items)?items.slice(0,12):[]; } catch {return [];} })();
+  const recent = (() => { try { const items=JSON.parse(localStorage.getItem(storeKey)||"[]"); return Array.isArray(items)?items.slice(0,12).map(p=>p.source==="personal"||p.classificationVersion===2?p:{...p,isDrink:null}):[]; } catch {return [];} })();
   let found=[], active=null, lastRequest=0, processing=false;
   let capturePhoto = "", captureLabel = "", pendingBarcodeFromScanner = false;
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_url,image_small_url,image_front_url,image_front_small_url,selected_images,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,ingredients_analysis_tags,categories_tags,quantity";
   const status = (message, type="") => { const target=el("productScanStatus"); if(target){target.textContent=message;target.dataset.statusType=type;} };
   const validCapture = data => /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(data||"") && data.length < 2_500_000;
   function setCapture(data, label) {
@@ -36,24 +35,23 @@
         && !url.username && !url.password ? url.href : "";
     } catch { return ""; }
   };
-  async function timedFetch(url, options, ms) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ms);
-    try { return await fetch(url, { ...options, signal: controller.signal }); }
-    finally { clearTimeout(timer); }
-  }
   function product(raw) {
     const n=raw.nutriments||{};
     const categories=Array.isArray(raw.categories_tags)?raw.categories_tags:[];
-    const drinkTags=/^(en|bg|fr):.*(beverages|drinks|fruit-juices|soft-drinks|fruit-nectars|water|milks|drinkable-yogurts|coffees|teas|smoothies|energy-drinks|plant-based-beverages)/i;
-    const isDrink=categories.length ? categories.some(tag=>drinkTags.test(tag)) : null;
+    // OFF includes ancestor categories. "plant-based-foods-and-beverages" also
+    // describes solid foods, so substring matching "beverages" mislabels pasta.
+    const drinkTags=new Set(["en:beverages","en:drinks","en:milks","en:drinkable-yogurts",
+      "en:plant-based-beverages","en:fruit-juices","en:fruit-nectars","en:soft-drinks",
+      "en:waters","en:smoothies","en:energy-drinks","bg:напитки","fr:boissons"]);
+    const meaningful=categories.filter(tag=>!["en:plant-based-foods-and-beverages","en:foods-and-beverages"].includes(tag));
+    const isDrink=categories.some(tag=>drinkTags.has(tag))?true:meaningful.length?false:null;
     return {
       code:String(raw.code||"").replace(/\D/g,""), name:String(raw.product_name_bg||raw.product_name||raw.generic_name||"Неизвестен продукт").trim(),
-      brand:String(raw.brands||""), image:img(
-        raw.image_front_url || raw.image_front_small_url || raw.image_url || raw.image_small_url ||
-        raw.selected_images?.front?.display?.bg || raw.selected_images?.front?.display?.en ||
-        raw.selected_images?.front?.small?.bg || raw.selected_images?.front?.small?.en || ""
-      ),
+      brand:String(raw.brands||""), image:[
+        raw.image_front_url, raw.image_front_small_url, raw.image_url, raw.image_small_url,
+        raw.selected_images?.front?.display?.bg, raw.selected_images?.front?.display?.en,
+        raw.selected_images?.front?.small?.bg, raw.selected_images?.front?.small?.en
+      ].map(img).find(Boolean)||"",
       energy:num(n["energy-kcal_100g"]) ?? (num(n.energy_100g)!==null ? num(n.energy_100g)/4.184 : null),
       sugar:num(n.sugars_100g), salt:num(n.salt_100g), saturated:num(n["saturated-fat_100g"]),
       fat:num(n.fat_100g), protein:num(n.proteins_100g), fiber:num(n.fiber_100g), carbs:num(n.carbohydrates_100g),
@@ -62,7 +60,7 @@
       ingredients:String(raw.ingredients_text_bg||raw.ingredients_text||""),
       allergens:Array.isArray(raw.allergens_tags)?raw.allergens_tags.map(x=>x.split(":").pop().replaceAll("-"," ")):[],
       additives:Array.isArray(raw.additives_tags)?raw.additives_tags.map(x=>x.split(":").pop().toUpperCase()):[],
-      quantity:String(raw.quantity||""), isDrink
+      quantity:String(raw.quantity||""), isDrink, classificationVersion:2
     };
   }
   function persist(item) {
@@ -214,47 +212,15 @@
     el("productScanDetail").innerHTML=content;
     el("productScanDetail").classList.remove("hidden");
   }
-    async function getData(params) {
-    const barcode=String(params.barcode||"").replace(/\D/g,"");
-    const query=String(params.query||"").trim();
-    const args=barcode?{barcode}:{query};
-    const endpoint="/api/foods?"+new URLSearchParams(args);
-    let lastError=new Error("Неуспешна заявка към базата.");
-    try {
-      const res=await timedFetch(endpoint,{headers:{Accept:"application/json"}},9000);
-      const data=await res.json().catch(()=>({}));
-      if(res.ok)return data;
-      if(res.status===404&&barcode)return {status:0,product:null};
-      if(res.status===400)throw Object.assign(new Error(data.error||"Невалиден баркод или име."),{noFallback:true});
-      lastError=new Error(data.error||("Грешка от хранителната база: "+res.status));
-    } catch(error) {
-      if(error.noFallback)throw error;
-      lastError=error;
-    }
-    // In browsers, direct retries use the user's IP instead of the shared Vercel address.
-    const path=barcode
-      ? "/api/v2/product/"+encodeURIComponent(barcode)+".json?fields="+encodeURIComponent(fields)
-      : "/cgi/search.pl?action=process&search_terms="+encodeURIComponent(query)+"&search_simple=1&json=1&page_size=12&fields="+encodeURIComponent(fields);
-    for(const host of ["https://world.openfoodfacts.org","https://bg.openfoodfacts.org"]) {
-      try {
-        const res=await timedFetch(host+path,{headers:{Accept:"application/json"}},6500);
-        if(res.status===429)throw Object.assign(new Error("Хранителната база е временно ограничена. Опитай отново след минута."),{rateLimited:true});
-        if(!res.ok)continue;
-        const data=await res.json();
-        if(data&&typeof data==="object")return data;
-      } catch(error) {
-        if(error.rateLimited)throw error;
-      }
-    }
-    throw ["TimeoutError", "AbortError"].includes(lastError.name)
-      ? new Error("Търсенето се забави. Провери връзката и опитай отново.")
-      : lastError;
+  async function getData(params) {
+    return window.NutriAIFoodDatabase.get(params);
   }
-  
+
   async function lookup(code, preserveCapture=false) {
     code=String(code||"").replace(/\D/g,"");
     if(code.length<8 || code.length>14){status("Въведи валиден EAN/UPC баркод от 8 до 14 цифри.","error");return false;}
     if(!preserveCapture)clearCapture();
+    personal()?.clearNoMatch?.();
     const id=++lastRequest;
     status("Проверявам продукта по EAN...");
     el("productScanMatches").innerHTML="";
@@ -300,6 +266,7 @@
     query=String(query||"").trim();
     if(query.length<2){status("Въведи поне 2 символа.","error");return false;}
     if(!preserveCapture)clearCapture();
+    personal()?.clearNoMatch?.();
     const id=++lastRequest;
     found=[];
     personal()?.renderMatches(query);
@@ -331,7 +298,7 @@
     }
   }
   
-  function show(raw) {const p=raw && "energy" in raw?raw:product(raw);renderDetail(p);persist(p);el("productScanDetail").scrollIntoView({behavior:"smooth",block:"start"});}
+  function show(raw) {personal()?.clearNoMatch?.();const p=raw && "energy" in raw?raw:product(raw);renderDetail(p);persist(p);el("productScanDetail").scrollIntoView({behavior:"smooth",block:"start"});}
   async function detectPhoto(file) {
     if(!file||processing)return;
     processing=true;
@@ -415,6 +382,10 @@
     });
     window.addEventListener("nutriai:barcode-found",e=>{
       if(!pendingBarcodeFromScanner)return;
+      ++lastRequest;
+      personal()?.clearNoMatch?.();
+      el("productScanDetail").classList.add("hidden");
+      el("productScanMatches").innerHTML="";
       if(e.detail?.capturedImage)setCapture(e.detail.capturedImage,"Кадър от сканирания баркод");
       status("Баркодът е разпознат. Зареждам данните за продукта...");
     });
@@ -436,17 +407,30 @@
       const own=personal()?.findBarcode(code);
       if(own) {show(own);status("Продуктът е намерен в твоята база.","success");return;}
       personal()?.showNoMatch({code,photo:capturePhoto,error:e.detail?.message||""});
-      status(code
+      el("productScanDetail").classList.add("hidden");
+      status(e.detail?.kind==="not-found"
         ? "Баркодът е разчетен, но продуктът липсва в каталога. Добави го от етикета."
-        : "Баркодът не се разчита от тази снимка. Опитай отблизо или въведи цифрите под линиите.",
+        : code
+          ? (e.detail?.message||"Няма връзка с хранителната база.")+" Не е потвърдено дали продуктът е в каталога."
+          : e.detail?.message||"Баркодът не се разчита от тази снимка. Опитай отблизо или въведи цифрите под линиите.",
         "error");
     });
-    el("productScanDetail").addEventListener("error",event=>{
+    const imageError=event=>{
       const image=event.target;
-      if(image?.tagName!=="IMG"||!image.classList.contains("product-identity-image"))return;
-      if(capturePhoto && image.src!==capturePhoto)image.src=capturePhoto;
-      else image.replaceWith(Object.assign(document.createElement("div"),{className:"product-identity-image product-photo-placeholder",textContent:"◈"}));
-    },true);
+      if(image?.tagName!=="IMG")return;
+      const main=image.classList.contains("product-identity-image");
+      const caption=main?image.closest(".product-quick-photo")?.querySelector("small"):null;
+      if(main&&capturePhoto&&image.src!==capturePhoto){
+        image.src=capturePhoto;image.alt=captureLabel||"Снимка от сканирането";
+        if(caption)caption.textContent=captureLabel||"Снимка от сканирането";
+      }else{
+        const placeholder=Object.assign(document.createElement("div"),{className:image.className+" product-photo-placeholder",textContent:"◈"});
+        placeholder.setAttribute("role","img");placeholder.setAttribute("aria-label","Няма снимка за продукта");
+        image.replaceWith(placeholder);
+        if(caption)caption.textContent="Няма снимка";
+      }
+    };
+    for(const id of ["productScanDetail","productScanMatches","productScanRecent"])el(id).addEventListener("error",imageError,true);
     renderRecent();
   });
 })();

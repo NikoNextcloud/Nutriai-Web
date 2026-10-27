@@ -26,7 +26,7 @@
   const trafficWeights = Object.freeze({ sugar: 3, saturated: 3, salt: 2.5, fat: 1.5 });
   const minKnownForFallback = 3;
   const toNumber = value => {
-    if (value === undefined || value === null || value === "") return null;
+    if (value === undefined || value === null || typeof value === "boolean" || String(value).trim() === "") return null;
     const v = Number(value);
     return Number.isFinite(v) && v >= 0 ? v : null;
   };

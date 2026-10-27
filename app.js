@@ -1784,7 +1784,7 @@ async function lookupBarcodeProduct(code) {
       }
     }
 
-    if (!item) throw new Error("Баркодът е разчетен, но продуктът не е в Open Food Facts. Снимай етикета или го добави в твоята база.");
+    if (!item) throw Object.assign(new Error("Баркодът е разчетен, но продуктът не е в Open Food Facts. Снимай етикета или го добави в твоята база."), { kind: "not-found" });
 
     const personal = source === "personal";
     const nutrients = item.nutriments || (personal ? {
@@ -1821,7 +1821,7 @@ async function lookupBarcodeProduct(code) {
   } catch (error) {
     status.textContent = error.message || "Не успях да намеря продукта.";
     window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
-      detail: { barcode: normalized, message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
+      detail: { barcode: normalized, kind: error.kind || "service", message: status.textContent, capturedImage: window.nutriaiBarcodeFrame || "" }
     }));
     return false;
   } finally {
@@ -1863,55 +1863,8 @@ async function searchWorldFoods(event) {
   }
 }
 
-async function fetchFoodDatabase({ query = "", barcode = "" }) {
-  const fields = "code,product_name,product_name_bg,generic_name,brands,image_url,image_front_url,image_front_small_url,image_small_url,selected_images,nutriments,serving_quantity,nutriscore_grade,nova_group,ingredients_text,ingredients_text_bg,allergens_tags,additives_tags,quantity";
-  const localParams = barcode ? "barcode=" + encodeURIComponent(barcode) : "query=" + encodeURIComponent(query);
-  const directPath = barcode
-    ? "/api/v2/product/" + encodeURIComponent(barcode) + ".json?fields=" + encodeURIComponent(fields)
-    : "/cgi/search.pl?action=process&search_terms=" + encodeURIComponent(query) + "&search_simple=1&json=1&page_size=12&fields=" + encodeURIComponent(fields);
-  const urls = [
-    "/api/foods?" + localParams,
-    "https://world.openfoodfacts.org" + directPath,
-    "https://bg.openfoodfacts.org" + directPath
-  ];
-
-  let lastError = null;
-  let proxyError = null;
-  for (const url of urls) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), url.startsWith("/api/") ? 10500 : 6500);
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-        signal: controller.signal
-      });
-      const contentType = response.headers.get("content-type") || "";
-      const data = contentType.includes("json") ? await response.json().catch(() => null) : null;
-      if (response.status === 404 && barcode) return { status: 0, product: null };
-      if (!response.ok) {
-        const error = new Error(
-          data?.error || (response.status === 429
-            ? "Хранителната база временно ограничава заявките. Опитай отново след минута."
-            : "Сървърът на хранителната база върна грешка " + response.status + ".")
-        );
-        if (url.startsWith("/api/")) proxyError = error;
-        lastError = error;
-        continue;
-      }
-      if (!data || typeof data !== "object") {
-        lastError = new Error("Хранителната база не върна валиден отговор.");
-        continue;
-      }
-      return data;
-    } catch (error) {
-      lastError = error?.name === "AbortError"
-        ? new Error("Връзката с хранителната база се забави. Опитай отново.")
-        : error;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-  throw new Error(proxyError?.message || lastError?.message || "Хранителната база временно не отговаря.");
+async function fetchFoodDatabase(params) {
+  return window.NutriAIFoodDatabase.get(params);
 }
 
 function normalizeWorldFood(product) {
@@ -2000,7 +1953,7 @@ async function scanBarcodeImage(event) {
   } catch (error) {
     status.textContent = error.message || "Баркодът не се разчита. Можеш да въведеш цифрите.";
     window.dispatchEvent(new CustomEvent("nutriai:barcode-error", {
-      detail: { barcode: "", message: status.textContent, capturedImage: photo }
+      detail: { barcode: "", kind: "decode", message: status.textContent, capturedImage: photo }
     }));
   } finally {
     event.target.value = "";

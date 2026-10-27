@@ -179,6 +179,11 @@
       $("productEditorStatus").textContent="Неуспешно запазване. Провери дали браузърът позволява локално съхранение.";
     }finally{button.disabled=false;}
   }
+  function clearNoMatch(){
+    const node=$("productNotFound");
+    if(node){node.classList.remove("product-not-found-active");delete node.dataset.code;delete node.dataset.query;}
+    pendingImage="";lastError="";
+  }
   function showNoMatch({code="",query="",photo="",ai=null,error=""}={}){
     lastError=error;
     if(ai){openEditor({code,query,ai,image:photo,note:"AI е разчел видимите части от етикета. Провери числата преди запазване — липсващите стойности остават празни."});return;}
@@ -197,7 +202,7 @@
     renderMatches(visibleQuery);
   }
   window.NutriAICustomProducts={
-    findBarcode,findQuery,all,hydrate,openEditor,showNoMatch,renderMatches,
+    findBarcode,findQuery,all,hydrate,openEditor,showNoMatch,clearNoMatch,renderMatches,
     setRecordsFromImport
   };
   document.addEventListener("DOMContentLoaded",()=>{

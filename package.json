@@ -5,9 +5,13 @@
   "type": "module",
   "description": "NutriAI browser app with optional serverless Groq proxy.",
   "scripts": {
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": "22.x"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
   }
 }
